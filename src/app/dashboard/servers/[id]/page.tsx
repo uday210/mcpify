@@ -6,6 +6,7 @@ import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTria
 import CopyButton from '@/components/CopyButton';
 import ServerConnect from '@/components/ServerConnect';
 import ToolTester from '@/components/ToolTester';
+import { toast } from '@/components/Toaster';
 import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
 
 export default function ServerDetailPage() {
@@ -53,6 +54,7 @@ export default function ServerDetailPage() {
 			setToolsDirty(false);
 			loadTools();
 			load();
+			toast('Tools updated', 'success');
 		} finally {
 			setSavingTools(false);
 		}
@@ -74,8 +76,11 @@ export default function ServerDetailPage() {
 		const d = await r.json();
 		if (payload.regenerateKey && d.apiKey) {
 			setServer((s: any) => ({ ...s, api_key: d.apiKey }));
-			alert('New API key generated. Copy it from the page.');
+			toast('New API key generated', 'success');
 		} else {
+			if (payload.regenerateSecret) toast('New client secret generated', 'success');
+			else if (payload.authMode) toast('Access mode updated', 'success');
+			else if (typeof payload.is_active === 'boolean') toast(payload.is_active ? 'Server enabled' : 'Server disabled', 'success');
 			load();
 		}
 	};
@@ -83,6 +88,7 @@ export default function ServerDetailPage() {
 	const remove = async () => {
 		if (!confirm('Delete this server permanently?')) return;
 		await fetch(`/api/servers/${id}`, { method: 'DELETE' });
+		toast('Server deleted', 'success');
 		router.push('/dashboard');
 	};
 
@@ -134,7 +140,7 @@ export default function ServerDetailPage() {
 			{(() => {
 				const authMode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
 				return (
-					<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 mb-6">
+					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 space-y-4 mb-6">
 						<Field label="MCP URL" value={server.base_url} />
 
 						<div>
@@ -230,7 +236,7 @@ export default function ServerDetailPage() {
 			</div>
 
 			{/* Tools (curate) */}
-			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 mb-6">
 				<div className="flex items-center justify-between mb-4">
 					<h2 className="font-semibold text-slate-900">
 						Tools ({tools.filter((t) => t.enabled).length}/{tools.length})
@@ -311,7 +317,7 @@ export default function ServerDetailPage() {
 				<CallsBarChart logs={server.logs || []} />
 			</div>
 
-			<div className="bg-white rounded-xl border border-slate-200 p-5">
+			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5">
 				<h3 className="font-semibold text-slate-900 mb-3">Recent calls</h3>
 				<CallsTable rows={server.logs || []} />
 			</div>

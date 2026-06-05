@@ -235,7 +235,7 @@ export default function NewConnectionPage() {
 				{typeCard('manual', 'Manual', 'Define endpoints', Wrench)}
 			</div>
 
-			<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 space-y-5">
 				{/* Catalog picker */}
 				{connectorType === 'catalog' && (
 					<div>

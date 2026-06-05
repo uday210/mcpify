@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Boxes, Server, Plug, Activity, LogOut, Menu, X } from 'lucide-react';
+import Toaster from '@/components/Toaster';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const [email, setEmail] = useState<string>('');
@@ -103,6 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 			<main className="md:pl-60">
 				<div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
 			</main>
+			<Toaster />
 		</div>
 	);
 }

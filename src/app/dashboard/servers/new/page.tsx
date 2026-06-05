@@ -100,7 +100,7 @@ export default function NewServerPage() {
 		const tokenUrl = `${mcpUrl}/token`;
 		return (
 			<div className="max-w-2xl">
-				<div className="bg-white rounded-xl border border-slate-200 p-6">
+				<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6">
 					<div className="flex items-center gap-2 text-green-600 mb-4">
 						<CheckCircle2 className="w-6 h-6" />
 						<h1 className="text-2xl font-bold text-slate-900">Server created</h1>
@@ -172,7 +172,7 @@ export default function NewServerPage() {
 					</Link>
 				</div>
 			) : (
-				<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+				<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 space-y-5">
 					<div>
 						<label className={labelCls}>Type</label>
 						<div className="grid grid-cols-2 gap-3">

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plug, Plus, CheckCircle2, XCircle, Trash2, RefreshCw } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
+import { toast } from '@/components/Toaster';
+import { Skeleton } from '@/components/Skeleton';
 
 interface Connection {
 	id: string;
@@ -54,7 +56,7 @@ function ConnectionsInner() {
 		try {
 			const r = await fetch(`/api/connections/${id}/verify`, { method: 'POST' });
 			const d = await r.json();
-			setNotice(`${d.ok ? '✓' : '✗'} ${d.message}`);
+			toast(d.message || (d.ok ? 'Reachable' : 'Failed'), d.ok ? 'success' : 'error');
 			load();
 		} finally {
 			setVerifying(null);
@@ -64,6 +66,7 @@ function ConnectionsInner() {
 	const remove = async (id: string) => {
 		if (!confirm('Delete this connection? Servers using it will stop working.')) return;
 		await fetch(`/api/connections/${id}`, { method: 'DELETE' });
+		toast('Connection deleted', 'success');
 		load();
 	};
 
@@ -90,8 +93,16 @@ function ConnectionsInner() {
 			)}
 
 			{loading ? (
-				<div className="text-center py-16">
-					<div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-600" />
+				<div className="space-y-3">
+					{[0, 1, 2].map((i) => (
+						<div key={i} className="bg-white rounded-2xl border border-slate-200/70 p-5 flex items-center gap-4">
+							<Skeleton className="w-10 h-10 rounded-lg" />
+							<div className="flex-1">
+								<Skeleton className="h-4 w-1/3 mb-2" />
+								<Skeleton className="h-3 w-1/2" />
+							</div>
+						</div>
+					))}
 				</div>
 			) : connections.length === 0 ? (
 				<div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
