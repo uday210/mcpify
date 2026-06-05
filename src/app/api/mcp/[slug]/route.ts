@@ -39,11 +39,15 @@ export async function POST(
 		return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, 400);
 	}
 
+	const meta = {
+		clientIp: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+		userAgent: request.headers.get('user-agent'),
+	};
 	const batch = Array.isArray(payload);
 	const requests: JsonRpcRequest[] = batch ? payload : [payload];
 	const responses = [];
 	for (const req of requests) {
-		const res = await handleRpc(authed, req);
+		const res = await handleRpc(authed, req, meta);
 		if (res) responses.push(res);
 	}
 

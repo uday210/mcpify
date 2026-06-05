@@ -45,7 +45,11 @@ export async function POST(
 		return new Response('Parse error', { status: 400, headers: CORS });
 	}
 
-	const res = await handleRpc(authed, req);
+	const meta = {
+		clientIp: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+		userAgent: request.headers.get('user-agent'),
+	};
+	const res = await handleRpc(authed, req, meta);
 	if (res) {
 		const delivered = pushToSession(sessionId, res);
 		if (!delivered) {

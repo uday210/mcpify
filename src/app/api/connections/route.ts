@@ -13,7 +13,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from('app_connections')
-		.select('id, name, auth_type, connector_type, base_url, is_active, last_verified_at, error_message, config, app_def_id, created_at')
+		.select('id, name, auth_type, connector_type, base_url, is_active, last_verified_at, error_message, config, app_def_id, created_at, app_definitions(logo_url)')
 		.order('created_at', { ascending: false });
 
 	if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -22,7 +22,9 @@ export async function GET() {
 	const safe = (data || []).map((c: any) => ({
 		...c,
 		toolCount: Array.isArray(c.config?.tools) ? c.config.tools.length : 0,
+		logo_url: c.app_definitions?.logo_url || null,
 		config: undefined,
+		app_definitions: undefined,
 	}));
 	return NextResponse.json(safe);
 }

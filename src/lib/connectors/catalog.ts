@@ -221,6 +221,89 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('trending_movies', 'Trending movies today.', 'GET', '/trending/movie/day', []),
 		],
 	},
+	todoist: {
+		baseUrl: 'https://api.todoist.com/rest/v2',
+		tools: [
+			tool('get_tasks', 'List active tasks.', 'GET', '/tasks', [
+				{ name: 'project_id', in: 'query' },
+				{ name: 'filter', in: 'query', description: 'e.g. "today"' },
+			]),
+			tool('create_task', 'Create a task.', 'POST', '/tasks', [
+				{ name: 'content', in: 'body', required: true, description: 'Task text' },
+				{ name: 'due_string', in: 'body', description: 'e.g. "tomorrow 9am"' },
+			]),
+			tool('get_projects', 'List projects.', 'GET', '/projects', []),
+		],
+	},
+	asana: {
+		baseUrl: 'https://app.asana.com/api/1.0',
+		tools: [
+			tool('get_me', 'Get the authenticated user.', 'GET', '/users/me', []),
+			tool('list_workspaces', 'List workspaces.', 'GET', '/workspaces', []),
+			tool('list_projects', 'List projects in a workspace.', 'GET', '/projects', [{ name: 'workspace', in: 'query' }]),
+		],
+	},
+	calendly: {
+		baseUrl: 'https://api.calendly.com',
+		tools: [
+			tool('get_current_user', 'Get the current Calendly user.', 'GET', '/users/me', []),
+			tool('list_scheduled_events', 'List scheduled events.', 'GET', '/scheduled_events', [
+				{ name: 'user', in: 'query', required: true, description: 'User URI (from get_current_user)' },
+			]),
+		],
+	},
+	intercom: {
+		baseUrl: 'https://api.intercom.io',
+		tools: [
+			tool('list_contacts', 'List contacts.', 'GET', '/contacts', []),
+			tool('list_conversations', 'List conversations.', 'GET', '/conversations', []),
+			tool('list_admins', 'List workspace admins.', 'GET', '/admins', []),
+		],
+	},
+	digitalocean: {
+		baseUrl: 'https://api.digitalocean.com/v2',
+		tools: [
+			tool('account', 'Get account info.', 'GET', '/account', []),
+			tool('list_droplets', 'List droplets.', 'GET', '/droplets', [{ name: 'per_page', in: 'query', type: 'integer' }]),
+			tool('list_domains', 'List domains.', 'GET', '/domains', []),
+		],
+	},
+	cloudflare: {
+		baseUrl: 'https://api.cloudflare.com/client/v4',
+		tools: [
+			tool('verify_token', 'Verify the API token.', 'GET', '/user/tokens/verify', []),
+			tool('list_zones', 'List zones.', 'GET', '/zones', [{ name: 'name', in: 'query' }]),
+		],
+	},
+	openai: {
+		baseUrl: 'https://api.openai.com/v1',
+		tools: [
+			tool('list_models', 'List available models.', 'GET', '/models', []),
+			tool('get_model', 'Retrieve a model.', 'GET', '/models/{model}', [{ name: 'model', in: 'path', required: true }]),
+		],
+	},
+	anthropic: {
+		baseUrl: 'https://api.anthropic.com',
+		tools: [tool('list_models', 'List available Claude models.', 'GET', '/v1/models', [])],
+	},
+	twilio: {
+		baseUrl: 'https://api.twilio.com',
+		tools: [
+			tool('list_messages', 'List recent SMS messages.', 'GET', '/2010-04-01/Accounts/{AccountSid}/Messages.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+				{ name: 'PageSize', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	brave: {
+		baseUrl: 'https://api.search.brave.com',
+		tools: [
+			tool('web_search', 'Brave web search.', 'GET', '/res/v1/web/search', [
+				{ name: 'q', in: 'query', required: true, description: 'Search query' },
+				{ name: 'count', in: 'query', type: 'integer' },
+			]),
+		],
+	},
 };
 
 export function getCatalogConnector(slug: string): CatalogConnector | null {

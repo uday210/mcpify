@@ -39,80 +39,102 @@ async function loadTools(serverId: string): Promise<ToolRow[]> {
  * Handles a single JSON-RPC request against an authenticated MCP server.
  * Returns the response, or null for notifications (which get no reply).
  */
+export interface RequestMeta {
+	clientIp?: string | null;
+	userAgent?: string | null;
+}
+
 export async function handleRpc(
 	authed: AuthedServer,
-	req: JsonRpcRequest
+	req: JsonRpcRequest,
+	meta: RequestMeta = {}
 ): Promise<JsonRpcResponse | null> {
 	const { server } = authed;
 	const id = req.id ?? null;
 	const started = Date.now();
+	let resource: string | null = null;
+	let statusCode = 200;
+	let errorMessage: string | undefined;
+	let response: JsonRpcResponse | null;
 
 	try {
 		switch (req.method) {
 			case 'initialize': {
 				const requested = req.params?.protocolVersion;
-				return rpcResult(id, {
+				response = rpcResult(id, {
 					protocolVersion: typeof requested === 'string' ? requested : DEFAULT_PROTOCOL,
 					capabilities: { tools: { listChanged: false } },
 					serverInfo: { name: server.name || server.slug, version: SERVER_VERSION },
 					instructions: server.description || undefined,
 				});
+				break;
 			}
 
 			case 'notifications/initialized':
 			case 'notifications/cancelled':
-				return null; // notification, no response
+				return null; // notification, no response, not logged
 
 			case 'ping':
-				return rpcResult(id, {});
+				return rpcResult(id, {}); // health check, not logged
 
 			case 'tools/list': {
 				const tools = await loadTools(server.id);
-				return rpcResult(id, {
+				response = rpcResult(id, {
 					tools: tools.map((t) => ({
 						name: t.name,
 						description: t.description || '',
 						inputSchema: t.input_schema || { type: 'object', properties: {} },
 					})),
 				});
+				break;
 			}
 
 			case 'resources/list':
-				return rpcResult(id, { resources: [] });
+				response = rpcResult(id, { resources: [] });
+				break;
 
 			case 'prompts/list':
-				return rpcResult(id, { prompts: [] });
+				response = rpcResult(id, { prompts: [] });
+				break;
 
 			case 'tools/call': {
 				const toolName = req.params?.name;
+				resource = toolName || null;
 				const args = req.params?.arguments || {};
 				if (!toolName) {
-					return rpcError(id, INVALID_PARAMS, 'Missing tool name');
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, 'Missing tool name');
+					break;
 				}
-
 				const tools = await loadTools(server.id);
 				const tool = tools.find((t) => t.name === toolName);
 				if (!tool) {
-					return rpcError(id, INVALID_PARAMS, `Unknown tool: ${toolName}`);
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `Unknown tool: ${toolName}`);
+					break;
 				}
-
 				const result = await executeTool(authed.connection, tool, args);
-				await logAccess(server, 'tools/call', toolName, result.isError ? 500 : 200, Date.now() - started);
-
-				return rpcResult(id, {
-					content: result.content,
-					isError: result.isError,
-				});
+				statusCode = result.isError ? 502 : 200;
+				response = rpcResult(id, { content: result.content, isError: result.isError });
+				break;
 			}
 
 			default:
-				return rpcError(id, METHOD_NOT_FOUND, `Method not found: ${req.method}`);
+				statusCode = 404;
+				response = rpcError(id, METHOD_NOT_FOUND, `Method not found: ${req.method}`);
 		}
 	} catch (err: any) {
-		await logAccess(server, req.method, null, 500, Date.now() - started, err?.message);
-		if (isNotification(req)) return null;
-		return rpcError(id, INTERNAL_ERROR, err?.message || 'Internal error');
+		statusCode = 500;
+		errorMessage = err?.message || 'Internal error';
+		response = isNotification(req) ? null : rpcError(id, INTERNAL_ERROR, errorMessage || 'Internal error');
 	}
+
+	// Log meaningful calls (skip the chatty initialize/ping health traffic).
+	if (req.method === 'tools/call' || req.method === 'tools/list') {
+		await logAccess(server, req.method, resource, statusCode, Date.now() - started, errorMessage, meta);
+	}
+
+	return response;
 }
 
 async function logAccess(
@@ -121,7 +143,8 @@ async function logAccess(
 	resource: string | null,
 	statusCode: number,
 	durationMs: number,
-	errorMessage?: string
+	errorMessage?: string,
+	meta: RequestMeta = {}
 ) {
 	try {
 		const admin = createAdminClient();
@@ -132,6 +155,8 @@ async function logAccess(
 			status_code: statusCode,
 			duration_ms: durationMs,
 			error_message: errorMessage || null,
+			client_ip: meta.clientIp || null,
+			user_agent: meta.userAgent || null,
 		});
 		await admin
 			.from('mcp_servers')

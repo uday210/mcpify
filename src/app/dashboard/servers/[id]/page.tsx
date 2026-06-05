@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Play, RotateCw, Trash2, Power } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import ServerConnect from '@/components/ServerConnect';
+import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
 
 export default function ServerDetailPage() {
 	const params = useParams();
@@ -21,16 +22,25 @@ export default function ServerDetailPage() {
 	const [testResult, setTestResult] = useState<string>('');
 	const [running, setRunning] = useState(false);
 
+	const [auto, setAuto] = useState(true);
+
 	const load = () => {
 		fetch(`/api/servers/${id}`)
 			.then((r) => r.json())
 			.then((d) => {
 				setServer(d);
-				if (d.tools?.[0]) setToolName(d.tools[0].name);
+				setToolName((cur) => cur || d.tools?.[0]?.name || '');
 			})
 			.finally(() => setLoading(false));
 	};
 	useEffect(load, [id]);
+
+	// Live-refresh the monitoring data.
+	useEffect(() => {
+		if (!auto) return;
+		const t = setInterval(load, 5000);
+		return () => clearInterval(t);
+	}, [auto, id]);
 
 	const runTest = async () => {
 		setRunning(true);
@@ -243,25 +253,43 @@ export default function ServerDetailPage() {
 				</div>
 			</div>
 
-			{/* Logs */}
-			<div className="bg-white rounded-xl border border-slate-200 p-6">
-				<h2 className="font-semibold text-slate-900 mb-4">Recent activity</h2>
-				{(server.logs || []).length === 0 ? (
-					<p className="text-sm text-slate-400">No requests yet.</p>
-				) : (
-					<div className="space-y-1 text-xs font-mono">
-						{server.logs.map((l: any, i: number) => (
-							<div key={i} className="flex items-center gap-3 text-slate-600">
-								<span className={l.status_code >= 400 ? 'text-red-600' : 'text-green-600'}>
-									{l.status_code || '—'}
-								</span>
-								<span className="text-slate-800">{l.method}</span>
-								<span className="text-slate-400">{l.resource || ''}</span>
-								<span className="text-slate-400 ml-auto">{l.duration_ms}ms</span>
-							</div>
-						))}
+			{/* Monitoring */}
+			<div className="flex items-center justify-between mb-3">
+				<h2 className="text-lg font-semibold text-slate-900">Monitoring</h2>
+				<button
+					onClick={() => setAuto((a) => !a)}
+					className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border transition ${
+						auto ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+					}`}
+				>
+					<RotateCw className={`w-3.5 h-3.5 ${auto ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+					{auto ? 'Live' : 'Paused'}
+				</button>
+			</div>
+
+			{(() => {
+				const logs = server.logs || [];
+				const recentErr = logs.filter((l: any) => (l.status_code || 0) >= 400).length;
+				const avg = logs.length
+					? Math.round(logs.reduce((s: number, l: any) => s + (l.duration_ms || 0), 0) / logs.length)
+					: 0;
+				return (
+					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+						<Stat label="Total calls" value={server.access_count || 0} />
+						<Stat label="Errors (all time)" value={server.error_count || 0} tone={server.error_count ? 'bad' : 'good'} />
+						<Stat label="Avg latency (recent)" value={`${avg}ms`} />
+						<Stat label="Errors (recent)" value={recentErr} tone={recentErr ? 'bad' : 'good'} />
 					</div>
-				)}
+				);
+			})()}
+
+			<div className="mb-6">
+				<CallsBarChart logs={server.logs || []} />
+			</div>
+
+			<div className="bg-white rounded-xl border border-slate-200 p-5">
+				<h3 className="font-semibold text-slate-900 mb-3">Recent calls</h3>
+				<CallsTable rows={server.logs || []} />
 			</div>
 		</div>
 	);

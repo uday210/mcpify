@@ -15,6 +15,7 @@ interface Connection {
 	last_verified_at: string | null;
 	error_message: string | null;
 	toolCount: number;
+	logo_url: string | null;
 }
 
 export default function ConnectionsPage() {
@@ -110,39 +111,54 @@ function ConnectionsInner() {
 					{connections.map((c) => (
 						<div
 							key={c.id}
-							className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between"
+							className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between hover:border-slate-300 transition"
 						>
-							<div>
-								<div className="flex items-center gap-2">
-									<h3 className="font-semibold text-slate-900">{c.name}</h3>
-									<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 capitalize">
-										{c.connector_type}
-									</span>
-									<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-										{c.auth_type}
-									</span>
-								</div>
-								<p className="text-xs text-slate-400 mt-1 font-mono">{c.base_url}</p>
-								<div className="flex items-center gap-3 mt-2 text-xs">
-									<span className="text-slate-500">{c.toolCount} tools</span>
-									{c.last_verified_at ? (
-										c.error_message ? (
-											<span className="flex items-center gap-1 text-red-600">
-												<XCircle className="w-3.5 h-3.5" />
-												{c.error_message}
-											</span>
+							<div className="flex items-center gap-4 min-w-0">
+								{c.logo_url ? (
+									// eslint-disable-next-line @next/next/no-img-element
+									<img
+										src={c.logo_url}
+										alt=""
+										className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-100 shrink-0"
+										onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')}
+									/>
+								) : (
+									<div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+										<Plug className="w-5 h-5 text-slate-400" />
+									</div>
+								)}
+								<div className="min-w-0">
+									<div className="flex items-center gap-2 flex-wrap">
+										<h3 className="font-semibold text-slate-900">{c.name}</h3>
+										<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 capitalize">
+											{c.connector_type}
+										</span>
+										<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
+											{c.auth_type}
+										</span>
+									</div>
+									<p className="text-xs text-slate-400 mt-1 font-mono truncate">{c.base_url}</p>
+									<div className="flex items-center gap-3 mt-2 text-xs">
+										<span className="text-slate-500">{c.toolCount} tools</span>
+										{c.last_verified_at ? (
+											c.error_message ? (
+												<span className="flex items-center gap-1 text-red-600">
+													<XCircle className="w-3.5 h-3.5" />
+													{c.error_message}
+												</span>
+											) : (
+												<span className="flex items-center gap-1 text-green-600">
+													<CheckCircle2 className="w-3.5 h-3.5" />
+													Verified
+												</span>
+											)
 										) : (
-											<span className="flex items-center gap-1 text-green-600">
-												<CheckCircle2 className="w-3.5 h-3.5" />
-												Verified
-											</span>
-										)
-									) : (
-										<span className="text-slate-400">Not verified</span>
-									)}
+											<span className="text-slate-400">Not verified</span>
+										)}
+									</div>
 								</div>
 							</div>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 shrink-0">
 								<button
 									onClick={() => verify(c.id)}
 									disabled={verifying === c.id}
