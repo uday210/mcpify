@@ -22,17 +22,24 @@ interface ToolRow {
 	http_method: string;
 	path_template: string;
 	param_map: Array<Record<string, any>>;
+	app_connection_id: string | null;
 }
 
 async function loadTools(serverId: string): Promise<ToolRow[]> {
 	const admin = createAdminClient();
 	const { data } = await admin
 		.from('mcp_tools')
-		.select('name, description, input_schema, http_method, path_template, param_map')
+		.select('name, description, input_schema, http_method, path_template, param_map, app_connection_id')
 		.eq('mcp_server_id', serverId)
 		.eq('enabled', true)
 		.order('name');
 	return (data as ToolRow[]) || [];
+}
+
+async function loadConnection(id: string): Promise<any> {
+	const admin = createAdminClient();
+	const { data } = await admin.from('app_connections').select('*').eq('id', id).maybeSingle();
+	return data;
 }
 
 /**
@@ -113,7 +120,16 @@ export async function handleRpc(
 					response = rpcError(id, INVALID_PARAMS, `Unknown tool: ${toolName}`);
 					break;
 				}
-				const result = await executeTool(authed.connection, tool, args);
+				// Aggregate servers route each tool to its own connection.
+				const connection = tool.app_connection_id
+					? await loadConnection(tool.app_connection_id)
+					: authed.connection;
+				if (!connection) {
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `No connection for tool: ${toolName}`);
+					break;
+				}
+				const result = await executeTool(connection, tool, args);
 				statusCode = result.isError ? 502 : 200;
 				response = rpcResult(id, { content: result.content, isError: result.isError });
 				break;

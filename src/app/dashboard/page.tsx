@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Server, Activity } from 'lucide-react';
+import { Plus, Server, Activity, Boxes } from 'lucide-react';
+import AppIcon from '@/components/AppIcon';
 
 interface MCPServer {
 	id: string;
@@ -12,6 +13,8 @@ interface MCPServer {
 	is_active: boolean;
 	access_count: number;
 	created_at: string;
+	mode: string;
+	logo_url: string | null;
 }
 
 export default function DashboardPage() {
@@ -76,21 +79,33 @@ export default function DashboardPage() {
 							href={`/dashboard/servers/${s.id}`}
 							className="group bg-white rounded-xl border border-slate-200 p-5 hover:border-cyan-300 hover:shadow-md transition"
 						>
-							<div className="flex items-start justify-between mb-3">
-								<h3 className="font-semibold text-slate-900 group-hover:text-cyan-600 transition">
-									{s.name}
-								</h3>
+							<div className="flex items-start gap-3 mb-3">
+								{s.mode === 'aggregate' ? (
+									<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0">
+										<Boxes className="w-5 h-5 text-white" />
+									</div>
+								) : (
+									<AppIcon src={s.logo_url} name={s.name} size={40} />
+								)}
+								<div className="min-w-0 flex-1">
+									<h3 className="font-semibold text-slate-900 group-hover:text-cyan-600 transition truncate">
+										{s.name}
+									</h3>
+									<p className="text-xs font-mono text-slate-400 truncate">/{s.slug}</p>
+								</div>
 								<span
-									className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+									className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
 										s.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
 									}`}
 								>
 									{s.is_active ? 'Active' : 'Inactive'}
 								</span>
 							</div>
-							<p className="text-xs font-mono text-slate-400 mb-3">/{s.slug}</p>
-							<div className="flex items-center gap-4 text-xs text-slate-500">
+							<div className="flex items-center gap-3 text-xs text-slate-500">
 								<span className="uppercase tracking-wide">{s.transport_type}</span>
+								{s.mode === 'aggregate' && (
+									<span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700">aggregate</span>
+								)}
 								<span className="flex items-center gap-1">
 									<Activity className="w-3.5 h-3.5" />
 									{s.access_count || 0} calls

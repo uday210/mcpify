@@ -26,6 +26,7 @@ export default function NewServerPage() {
 	const [name, setName] = useState('');
 	const [transport, setTransport] = useState('http_stream');
 	const [authRequired, setAuthRequired] = useState(true);
+	const [mode, setMode] = useState<'single' | 'aggregate'>('single');
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [created, setCreated] = useState<any>(null);
@@ -59,20 +60,23 @@ export default function NewServerPage() {
 
 	const submit = async () => {
 		setError(null);
-		if (!connectionId) return setError('Pick a connection.');
 		if (!name) return setError('Name your server.');
-		if (selected.size === 0) return setError('Select at least one tool.');
+		if (mode === 'single') {
+			if (!connectionId) return setError('Pick a connection.');
+			if (selected.size === 0) return setError('Select at least one tool.');
+		}
 		setSubmitting(true);
 		try {
 			const r = await fetch('/api/servers', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					connectionId,
+					mode,
+					connectionId: mode === 'single' ? connectionId : undefined,
 					name,
 					transportType: transport,
 					authRequired,
-					toolNames: Array.from(selected),
+					toolNames: mode === 'single' ? Array.from(selected) : undefined,
 				}),
 			});
 			const d = await r.json();
@@ -183,16 +187,45 @@ export default function NewServerPage() {
 			) : (
 				<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
 					<div>
-						<label className={labelCls}>Connection</label>
-						<select className={input} value={connectionId} onChange={(e) => setConnectionId(e.target.value)}>
-							<option value="">Select a connection…</option>
-							{connections.map((c) => (
-								<option key={c.id} value={c.id}>
-									{c.name} ({c.connector_type})
-								</option>
+						<label className={labelCls}>Type</label>
+						<div className="grid grid-cols-2 gap-3">
+							{[
+								{ v: 'single' as const, label: 'Single connection', desc: 'One app’s tools' },
+								{ v: 'aggregate' as const, label: 'All connections', desc: 'One server for everything' },
+							].map((m) => (
+								<button
+									key={m.v}
+									onClick={() => setMode(m.v)}
+									className={`text-left p-3 rounded-lg border-2 transition ${
+										mode === m.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
+									}`}
+								>
+									<div className="font-medium text-slate-900">{m.label}</div>
+									<div className="text-xs text-slate-500">{m.desc}</div>
+								</button>
 							))}
-						</select>
+						</div>
 					</div>
+
+					{mode === 'aggregate' ? (
+						<div className="p-3 bg-cyan-50 border border-cyan-200 rounded-lg text-sm text-cyan-800">
+							This server will expose tools from <strong>all {connections.length} connection(s)</strong>,
+							namespaced by connection (e.g. <code>openweather_current_weather</code>). New connections won’t be
+							added automatically — recreate the server to refresh.
+						</div>
+					) : (
+						<div>
+							<label className={labelCls}>Connection</label>
+							<select className={input} value={connectionId} onChange={(e) => setConnectionId(e.target.value)}>
+								<option value="">Select a connection…</option>
+								{connections.map((c) => (
+									<option key={c.id} value={c.id}>
+										{c.name} ({c.connector_type})
+									</option>
+								))}
+							</select>
+						</div>
+					)}
 
 					<div>
 						<label className={labelCls}>Server name</label>

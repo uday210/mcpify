@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { faviconFor } from '@/lib/favicon';
 
 /** GET /api/catalog — seeded catalog apps for the connection wizard. */
 export async function GET() {
@@ -17,7 +18,7 @@ export async function GET() {
 		name: a.name,
 		slug: a.slug,
 		description: a.description,
-		logo_url: a.logo_url,
+		logo_url: faviconFor(a.base_url) || a.logo_url,
 		base_url: a.base_url,
 		auth_type: a.auth_type,
 		api_documentation_url: a.api_documentation_url,

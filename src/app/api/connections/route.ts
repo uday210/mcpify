@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getOrgId } from '@/lib/api-helpers';
 import { buildConnectionInsert } from '@/lib/connectors/build';
+import { faviconFor } from '@/lib/favicon';
 
 /** GET /api/connections — list the user's connections (with app definition). */
 export async function GET() {
@@ -22,7 +23,7 @@ export async function GET() {
 	const safe = (data || []).map((c: any) => ({
 		...c,
 		toolCount: Array.isArray(c.config?.tools) ? c.config.tools.length : 0,
-		logo_url: c.app_definitions?.logo_url || null,
+		logo_url: faviconFor(c.base_url) || c.app_definitions?.logo_url || null,
 		config: undefined,
 		app_definitions: undefined,
 	}));

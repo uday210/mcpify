@@ -139,6 +139,7 @@ export type Database = {
 				Row: {
 					id: string;
 					mcp_server_id: string;
+					app_connection_id: string | null;
 					name: string;
 					description: string | null;
 					input_schema: Record<string, any>;
@@ -150,6 +151,7 @@ export type Database = {
 				};
 				Insert: {
 					mcp_server_id: string;
+					app_connection_id?: string | null;
 					name: string;
 					description?: string | null;
 					input_schema?: Record<string, any>;
@@ -180,6 +182,7 @@ export type Database = {
 					base_url: string;
 					api_key: string;
 					auth_required: boolean;
+					mode: string;
 					enabled_tools: string[];
 					enabled_resources: string[];
 					timeout_ms: number;
@@ -194,7 +197,7 @@ export type Database = {
 				};
 				Insert: {
 					org_id: string;
-					app_connection_id: string;
+					app_connection_id?: string | null;
 					name: string;
 					slug: string;
 					description?: string | null;
@@ -202,6 +205,7 @@ export type Database = {
 					base_url: string;
 					api_key: string;
 					auth_required?: boolean;
+					mode?: string;
 					enabled_tools?: string[];
 					enabled_resources?: string[];
 				};

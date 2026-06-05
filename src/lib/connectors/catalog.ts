@@ -304,6 +304,84 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 		],
 	},
+	vercel: {
+		baseUrl: 'https://api.vercel.com',
+		tools: [
+			tool('get_user', 'Get the authenticated user.', 'GET', '/v2/user', []),
+			tool('list_projects', 'List projects.', 'GET', '/v9/projects', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_deployments', 'List recent deployments.', 'GET', '/v6/deployments', [{ name: 'limit', in: 'query', type: 'integer' }]),
+		],
+	},
+	linear: {
+		baseUrl: 'https://api.linear.app',
+		tools: [
+			tool('run_graphql', 'Run a Linear GraphQL query.', 'POST', '/graphql', [
+				{ name: 'query', in: 'body', required: true, description: 'GraphQL query, e.g. { viewer { id name } }' },
+				{ name: 'variables', in: 'body', type: 'object' },
+			]),
+		],
+	},
+	figma: {
+		baseUrl: 'https://api.figma.com',
+		tools: [
+			tool('get_me', 'Get the authenticated user.', 'GET', '/v1/me', []),
+			tool('get_file', 'Get a Figma file by key.', 'GET', '/v1/files/{file_key}', [{ name: 'file_key', in: 'path', required: true }]),
+		],
+	},
+	unsplash: {
+		baseUrl: 'https://api.unsplash.com',
+		tools: [
+			tool('search_photos', 'Search photos.', 'GET', '/search/photos', [
+				{ name: 'query', in: 'query', required: true },
+				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
+			tool('random_photo', 'Get a random photo.', 'GET', '/photos/random', [{ name: 'query', in: 'query' }]),
+		],
+	},
+	giphy: {
+		baseUrl: 'https://api.giphy.com',
+		tools: [
+			tool('search_gifs', 'Search GIFs.', 'GET', '/v1/gifs/search', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('trending_gifs', 'Trending GIFs.', 'GET', '/v1/gifs/trending', [{ name: 'limit', in: 'query', type: 'integer' }]),
+		],
+	},
+	discord: {
+		baseUrl: 'https://discord.com/api/v10',
+		tools: [
+			tool('get_me', 'Get the bot/user.', 'GET', '/users/@me', []),
+			tool('list_guilds', 'List the bot/user’s servers.', 'GET', '/users/@me/guilds', []),
+		],
+	},
+	newsapi: {
+		baseUrl: 'https://newsapi.org/v2',
+		tools: [
+			tool('top_headlines', 'Top news headlines.', 'GET', '/top-headlines', [
+				{ name: 'country', in: 'query', description: 'e.g. us' },
+				{ name: 'category', in: 'query', description: 'business, technology, …' },
+			]),
+			tool('search_news', 'Search all articles.', 'GET', '/everything', [{ name: 'q', in: 'query', required: true }]),
+		],
+	},
+	pexels: {
+		baseUrl: 'https://api.pexels.com',
+		tools: [
+			tool('search_photos', 'Search photos.', 'GET', '/v1/search', [
+				{ name: 'query', in: 'query', required: true },
+				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
+			tool('curated_photos', 'Curated photos.', 'GET', '/v1/curated', [{ name: 'per_page', in: 'query', type: 'integer' }]),
+		],
+	},
+	supabase: {
+		baseUrl: 'https://api.supabase.com',
+		tools: [
+			tool('list_projects', 'List your Supabase projects.', 'GET', '/v1/projects', []),
+			tool('list_organizations', 'List your organizations.', 'GET', '/v1/organizations', []),
+		],
+	},
 };
 
 export function getCatalogConnector(slug: string): CatalogConnector | null {

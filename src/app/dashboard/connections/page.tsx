@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plug, Plus, CheckCircle2, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import AppIcon from '@/components/AppIcon';
 
 interface Connection {
 	id: string;
@@ -114,19 +115,7 @@ function ConnectionsInner() {
 							className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between hover:border-slate-300 transition"
 						>
 							<div className="flex items-center gap-4 min-w-0">
-								{c.logo_url ? (
-									// eslint-disable-next-line @next/next/no-img-element
-									<img
-										src={c.logo_url}
-										alt=""
-										className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-100 shrink-0"
-										onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')}
-									/>
-								) : (
-									<div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-										<Plug className="w-5 h-5 text-slate-400" />
-									</div>
-								)}
+								<AppIcon src={c.logo_url} name={c.name} size={40} />
 								<div className="min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
 										<h3 className="font-semibold text-slate-900">{c.name}</h3>

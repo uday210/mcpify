@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search } from 'lucide-react';
+import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
 type AuthType = 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth';
@@ -61,6 +62,7 @@ export default function NewConnectionPage() {
 
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [catalogQuery, setCatalogQuery] = useState('');
 
 	useEffect(() => {
 		fetch('/api/catalog')
@@ -221,38 +223,43 @@ export default function NewConnectionPage() {
 				{/* Catalog picker */}
 				{connectorType === 'catalog' && (
 					<div>
-						<label className={labelCls}>Choose an app</label>
-						<div className="grid grid-cols-2 gap-3">
-							{apps.map((a) => (
-								<button
-									key={a.slug}
-									onClick={() => pickApp(a)}
-									className={`flex items-start gap-3 text-left p-3 rounded-lg border transition ${
-										appSlug === a.slug
-											? 'border-cyan-500 bg-cyan-50'
-											: 'border-slate-200 hover:border-slate-300'
-									}`}
-								>
-									{a.logo_url ? (
-										// eslint-disable-next-line @next/next/no-img-element
-										<img
-											src={a.logo_url}
-											alt=""
-											className="w-8 h-8 rounded shrink-0 object-contain bg-white"
-											onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')}
-										/>
-									) : (
-										<div className="w-8 h-8 rounded shrink-0 bg-slate-100" />
-									)}
-									<div className="min-w-0">
-										<div className="font-medium text-slate-900">{a.name}</div>
-										<div className="text-xs text-slate-500 line-clamp-2">{a.description}</div>
-									</div>
-								</button>
-							))}
+						<div className="flex items-center justify-between mb-1">
+							<label className={labelCls}>Choose an app</label>
+							<span className="text-xs text-slate-400">{apps.length} apps</span>
+						</div>
+						<div className="relative mb-3">
+							<Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+							<input
+								className={`${input} pl-9`}
+								placeholder="Search apps…"
+								value={catalogQuery}
+								onChange={(e) => setCatalogQuery(e.target.value)}
+							/>
+						</div>
+						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
+							{apps
+								.filter((a) =>
+									(a.name + ' ' + a.description).toLowerCase().includes(catalogQuery.toLowerCase())
+								)
+								.map((a) => (
+									<button
+										key={a.slug}
+										onClick={() => pickApp(a)}
+										className={`flex flex-col items-center text-center gap-2 p-3 rounded-xl border transition ${
+											appSlug === a.slug
+												? 'border-cyan-500 bg-cyan-50 ring-1 ring-cyan-200'
+												: 'border-slate-200 hover:border-cyan-300 hover:shadow-sm'
+										}`}
+									>
+										<AppIcon src={a.logo_url} name={a.name} size={36} />
+										<div className="text-sm font-medium text-slate-900 leading-tight">{a.name}</div>
+									</button>
+								))}
 						</div>
 						{selectedApp?.auth_help && (
-							<p className="text-xs text-slate-500 mt-2">{selectedApp.auth_help}</p>
+							<p className="text-xs text-slate-500 mt-3 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+								💡 {selectedApp.auth_help}
+							</p>
 						)}
 					</div>
 				)}
