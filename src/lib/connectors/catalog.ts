@@ -606,6 +606,73 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('top_headlines', 'Top headlines.', 'GET', '/top-headlines', [{ name: 'category', in: 'query' }]),
 		],
 	},
+	// --- Shipping & accounting (enterprise) ---
+	fedex: {
+		baseUrl: 'https://apis.fedex.com',
+		tools: [
+			tool('track_by_number', 'Track shipments by tracking number.', 'POST', '/track/v1/trackingnumbers', [
+				{
+					name: 'body',
+					in: 'body',
+					required: true,
+					type: 'object',
+					description:
+						'FedEx track payload, e.g. {"trackingInfo":[{"trackingNumberInfo":{"trackingNumber":"123456789012"}}],"includeDetailedScans":true}',
+				},
+			]),
+			tool('validate_address', 'Resolve/validate an address.', 'POST', '/address/v1/addresses/resolve', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: 'FedEx address resolve payload' },
+			]),
+		],
+	},
+	quickbooks: {
+		baseUrl: 'https://quickbooks.api.intuit.com',
+		tools: [
+			tool('query', 'Run a QuickBooks query (SQL-like).', 'GET', '/v3/company/{realmId}/query', [
+				{ name: 'realmId', in: 'path', required: true, description: 'Company (realm) id from the OAuth connection' },
+				{ name: 'query', in: 'query', required: true, description: 'e.g. select * from Customer maxresults 10' },
+				{ name: 'minorversion', in: 'query', description: 'e.g. 65' },
+			]),
+			tool('company_info', 'Get company info.', 'GET', '/v3/company/{realmId}/companyinfo/{realmId}', [
+				{ name: 'realmId', in: 'path', required: true },
+			]),
+		],
+	},
+	square: {
+		baseUrl: 'https://connect.squareup.com',
+		tools: [
+			tool('list_locations', 'List business locations.', 'GET', '/v2/locations', []),
+			tool('list_payments', 'List payments.', 'GET', '/v2/payments', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_customers', 'List customers.', 'GET', '/v2/customers', []),
+		],
+	},
+	shippo: {
+		baseUrl: 'https://api.goshippo.com',
+		tools: [
+			tool('list_shipments', 'List shipments.', 'GET', '/shipments', []),
+			tool('track_status', 'Track a shipment.', 'GET', '/tracks/{carrier}/{tracking_number}', [
+				{ name: 'carrier', in: 'path', required: true, description: 'e.g. usps, fedex, ups' },
+				{ name: 'tracking_number', in: 'path', required: true },
+			]),
+		],
+	},
+	easypost: {
+		baseUrl: 'https://api.easypost.com/v2',
+		tools: [
+			tool('list_trackers', 'List trackers.', 'GET', '/trackers', [{ name: 'page_size', in: 'query', type: 'integer' }]),
+			tool('get_tracker', 'Retrieve a tracker.', 'GET', '/trackers/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	shipengine: {
+		baseUrl: 'https://api.shipengine.com',
+		tools: [
+			tool('list_carriers', 'List connected carriers.', 'GET', '/v1/carriers', []),
+			tool('track', 'Track a package.', 'GET', '/v1/tracking', [
+				{ name: 'carrier_code', in: 'query', required: true, description: 'e.g. ups, fedex, usps' },
+				{ name: 'tracking_number', in: 'query', required: true },
+			]),
+		],
+	},
 };
 
 export function getCatalogConnector(slug: string): CatalogConnector | null {

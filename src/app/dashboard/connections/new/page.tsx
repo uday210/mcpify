@@ -6,7 +6,7 @@ import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink 
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
-type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth';
+type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc';
 
 interface CatalogApp {
 	slug: string;
@@ -180,6 +180,13 @@ export default function NewConnectionPage() {
 							scopes: oauthScopes.split(/[ ,]+/).filter(Boolean),
 					  }
 					: {}),
+			};
+		}
+		if (authType === 'oauth2_cc') {
+			config.oauth = {
+				client_id: oauthClientId,
+				client_secret: oauthClientSecret,
+				...(connectorType !== 'catalog' ? { token_url: oauthTokenUrl, scope: oauthScopes } : {}),
 			};
 		}
 
@@ -480,7 +487,8 @@ export default function NewConnectionPage() {
 							<option value="bearer">Bearer Token</option>
 							<option value="basic">Basic Auth</option>
 							<option value="custom">Custom Header</option>
-							<option value="oauth">OAuth 2.0</option>
+							<option value="oauth">OAuth 2.0 (Authorization Code)</option>
+							<option value="oauth2_cc">OAuth 2.0 (Client Credentials)</option>
 						</select>
 					</div>
 				)}
@@ -566,6 +574,36 @@ export default function NewConnectionPage() {
 						<p className="text-xs text-slate-500">
 							You&apos;ll be redirected to authorize after saving. Set the provider&apos;s redirect URI to{' '}
 							<code className="bg-slate-100 px-1 rounded">{`{APP_URL}/api/oauth/callback`}</code>.
+						</p>
+					</div>
+				)}
+
+				{authType === 'oauth2_cc' && (
+					<div className="space-y-3">
+						<div className="grid grid-cols-2 gap-3">
+							<div>
+								<label className={labelCls}>Client ID</label>
+								<input className={input} value={oauthClientId} onChange={(e) => setOauthClientId(e.target.value)} />
+							</div>
+							<div>
+								<label className={labelCls}>Client Secret</label>
+								<input className={input} type="password" value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} />
+							</div>
+						</div>
+						{connectorType !== 'catalog' && (
+							<>
+								<div>
+									<label className={labelCls}>Token URL</label>
+									<input className={input} value={oauthTokenUrl} onChange={(e) => setOauthTokenUrl(e.target.value)} placeholder="https://provider.com/oauth/token" />
+								</div>
+								<div>
+									<label className={labelCls}>Scope (optional)</label>
+									<input className={input} value={oauthScopes} onChange={(e) => setOauthScopes(e.target.value)} />
+								</div>
+							</>
+						)}
+						<p className="text-xs text-slate-500">
+							mcpify exchanges your client ID + secret for a token automatically on each call (e.g. FedEx).
 						</p>
 					</div>
 				)}

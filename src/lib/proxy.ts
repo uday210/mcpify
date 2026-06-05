@@ -38,6 +38,10 @@ export async function executeTool(
 		let hasBody = false;
 
 		const map = Array.isArray(tool.param_map) ? tool.param_map : [];
+		// A single body param named "body" (or flagged whole) is sent as the
+		// entire JSON request body — lets tools call APIs with nested payloads.
+		const hasRawBody = map.some((p) => p.in === 'body' && (p.name === 'body' || p.whole));
+		let rawBody: any = undefined;
 		for (const p of map) {
 			const name = p.name;
 			if (!(name in args) || args[name] === undefined || args[name] === null) continue;
@@ -53,8 +57,12 @@ export async function executeTool(
 					headers[name] = String(value);
 					break;
 				case 'body':
-					body[name] = value;
-					hasBody = true;
+					if (hasRawBody && (name === 'body' || p.whole)) {
+						rawBody = typeof value === 'string' ? safeJson(value) : value;
+					} else {
+						body[name] = value;
+						hasBody = true;
+					}
 					break;
 				default:
 					query.set(name, String(value));
@@ -89,7 +97,10 @@ export async function executeTool(
 		const url = `${baseUrl}${path.startsWith('/') ? path : '/' + path}${qs ? '?' + qs : ''}`;
 
 		const init: RequestInit = { method, headers };
-		if (hasBody && writeMethod) {
+		if (rawBody !== undefined && writeMethod) {
+			headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+			init.body = JSON.stringify(rawBody);
+		} else if (hasBody && writeMethod) {
 			headers['Content-Type'] = headers['Content-Type'] || 'application/json';
 			init.body = JSON.stringify(body);
 		}
@@ -115,6 +126,14 @@ export async function executeTool(
 
 function errorResult(message: string): ToolResult {
 	return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
+}
+
+function safeJson(s: string): any {
+	try {
+		return JSON.parse(s);
+	} catch {
+		return s;
+	}
 }
 
 /**
@@ -192,7 +211,50 @@ async function applyAuth(
 			if (token) headers['Authorization'] = `Bearer ${token}`;
 			break;
 		}
+		case 'oauth2_cc': {
+			const token = await getClientCredentialsToken(connection);
+			if (token) headers['Authorization'] = `Bearer ${token}`;
+			break;
+		}
 	}
+}
+
+// In-memory client-credentials token cache (per connection). Single-instance.
+const ccTokenCache = new Map<string, { token: string; exp: number }>();
+
+/**
+ * Fetches (and caches) an OAuth2 client_credentials access token for the
+ * connection — used by enterprise APIs like FedEx that issue a token from a
+ * client id + secret. Credentials are sent in the form body.
+ */
+async function getClientCredentialsToken(connection: any): Promise<string | null> {
+	const cached = ccTokenCache.get(connection.id);
+	if (cached && cached.exp - Date.now() > 60_000) return cached.token;
+
+	const oauth = (connection.config || {}).oauth || {};
+	if (!oauth.token_url || !oauth.client_id) return null;
+	const clientSecret = oauth.client_secret ? safeDecrypt(oauth.client_secret).value : '';
+
+	const params = new URLSearchParams({
+		grant_type: 'client_credentials',
+		client_id: oauth.client_id,
+		client_secret: clientSecret || '',
+	});
+	if (oauth.scope) params.set('scope', oauth.scope);
+
+	const resp = await fetch(oauth.token_url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+		body: params.toString(),
+	});
+	if (!resp.ok) return null;
+	const tok = await resp.json();
+	if (!tok.access_token) return null;
+	ccTokenCache.set(connection.id, {
+		token: tok.access_token,
+		exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000,
+	});
+	return tok.access_token;
 }
 
 function safeDecrypt(hex: string): Record<string, any> {

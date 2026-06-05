@@ -101,6 +101,16 @@ export async function buildConnectionInsert(
 			...(o.client_id ? { client_id: o.client_id } : {}),
 			...(o.client_secret ? { client_secret: encryptCredentials({ value: o.client_secret }) } : {}),
 		};
+	} else if (authType === 'oauth2_cc') {
+		// OAuth2 client-credentials: token fetched on demand from token_url.
+		const o = body.config?.oauth || {};
+		config.oauth = {
+			...(config.oauth || {}),
+			...(o.token_url ? { token_url: o.token_url } : {}),
+			...(o.scope ? { scope: o.scope } : {}),
+			...(o.client_id ? { client_id: o.client_id } : {}),
+			...(o.client_secret ? { client_secret: encryptCredentials({ value: o.client_secret }) } : {}),
+		};
 	}
 
 	const insert = {
