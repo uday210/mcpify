@@ -1,5 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hashApiKey } from '@/lib/encryption';
+import { verifyToken } from '@/lib/oauth';
+
+// Access tokens issued by the /token endpoint are valid for one hour.
+export const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export interface AuthedServer {
 	server: any; // mcp_servers row (+ joined app_connections)
@@ -27,13 +31,26 @@ export async function authenticateServer(
 
 	if (!server) return null;
 
-	// Public servers skip key validation entirely.
-	if (server.auth_required === false) {
-		return { server, connection: (server as any).app_connections };
+	const mode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
+	const connection = (server as any).app_connections;
+
+	// Public servers skip validation entirely.
+	if (mode === 'none') {
+		return { server, connection };
 	}
 
 	if (!presentedKey) return null;
 
+	// OAuth mode: accept a bearer token we issued at the /token endpoint.
+	if (mode === 'oauth') {
+		const payload = verifyToken(presentedKey, ACCESS_TOKEN_TTL_MS);
+		if (payload && payload.slug === slug) {
+			return { server, connection };
+		}
+		return null;
+	}
+
+	// api_key mode (default).
 	let authorized = false;
 
 	// Primary key stored in plaintext on the server row.

@@ -138,60 +138,97 @@ export default function ServerDetailPage() {
 			</div>
 
 			{/* Connection details */}
-			<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 mb-6">
-				<Field label="MCP URL" value={server.base_url} />
+			{(() => {
+				const authMode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
+				return (
+					<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 mb-6">
+						<Field label="MCP URL" value={server.base_url} />
 
-				<div>
-					<div className="flex items-center justify-between mb-1">
-						<label className={labelCls}>Access</label>
-						<button
-							onClick={() => patch({ auth_required: !server.auth_required })}
-							className="text-xs text-cyan-600 hover:text-cyan-700"
-						>
-							{server.auth_required ? 'Make public (no auth)' : 'Require API key'}
-						</button>
-					</div>
-					<div
-						className={`px-3 py-2 rounded-lg text-sm border ${
-							server.auth_required
-								? 'bg-slate-50 border-slate-200 text-slate-700'
-								: 'bg-amber-50 border-amber-200 text-amber-800'
-						}`}
-					>
-						{server.auth_required
-							? 'API key required to call this server.'
-							: 'Public — anyone with the URL can call this server.'}
-					</div>
-				</div>
-
-				{server.auth_required && (
-					<div>
-						<div className="flex items-center justify-between mb-1">
-							<label className={labelCls}>API Key</label>
-							<div className="flex items-center gap-2">
-								<CopyButton value={server.api_key} />
-								<button
-									onClick={() => patch({ regenerateKey: true })}
-									className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-								>
-									<RotateCw className="w-3.5 h-3.5" /> Regenerate
-								</button>
+						<div>
+							<label className={labelCls}>Access</label>
+							<div className="grid grid-cols-3 gap-2">
+								{[
+									{ v: 'api_key', label: 'API Key' },
+									{ v: 'oauth', label: 'OAuth' },
+									{ v: 'none', label: 'No auth' },
+								].map((m) => (
+									<button
+										key={m.v}
+										onClick={() => patch({ authMode: m.v })}
+										className={`px-3 py-2 rounded-lg text-sm border transition ${
+											authMode === m.v
+												? 'border-cyan-500 bg-cyan-50 text-cyan-700'
+												: 'border-slate-200 text-slate-600 hover:bg-slate-50'
+										}`}
+									>
+										{m.label}
+									</button>
+								))}
 							</div>
 						</div>
-						<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
-							{server.api_key}
-						</div>
+
+						{authMode === 'api_key' && (
+							<div>
+								<div className="flex items-center justify-between mb-1">
+									<label className={labelCls}>API Key</label>
+									<div className="flex items-center gap-2">
+										<CopyButton value={server.api_key} />
+										<button
+											onClick={() => patch({ regenerateKey: true })}
+											className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+										>
+											<RotateCw className="w-3.5 h-3.5" /> Regenerate
+										</button>
+									</div>
+								</div>
+								<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
+									{server.api_key}
+								</div>
+							</div>
+						)}
+
+						{authMode === 'oauth' && (
+							<>
+								<Field label="Token endpoint" value={`${server.base_url}/token`} />
+								<Field label="Client ID" value={server.oauth_client_id || ''} />
+								<div>
+									<div className="flex items-center justify-between mb-1">
+										<label className={labelCls}>Client Secret</label>
+										<div className="flex items-center gap-2">
+											<CopyButton value={server.oauth_client_secret || ''} />
+											<button
+												onClick={() => patch({ regenerateSecret: true })}
+												className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+											>
+												<RotateCw className="w-3.5 h-3.5" /> Regenerate
+											</button>
+										</div>
+									</div>
+									<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
+										{server.oauth_client_secret}
+									</div>
+								</div>
+							</>
+						)}
+
+						{authMode === 'none' && (
+							<div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+								Public — anyone with the URL can call this server.
+							</div>
+						)}
 					</div>
-				)}
-			</div>
+				);
+			})()}
 
 			{/* Connect to a client */}
 			<ServerConnect
 				slug={server.slug}
 				url={server.base_url}
-				apiKey={server.api_key}
 				transport={server.transport_type}
-				authRequired={server.auth_required}
+				authMode={server.auth_mode || (server.auth_required === false ? 'none' : 'api_key')}
+				apiKey={server.api_key}
+				oauthClientId={server.oauth_client_id}
+				oauthClientSecret={server.oauth_client_secret}
 			/>
 
 			{/* Test console */}

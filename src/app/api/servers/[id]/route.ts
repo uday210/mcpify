@@ -56,10 +56,31 @@ export async function PATCH(
 	if (typeof body.is_active === 'boolean') update.is_active = body.is_active;
 	if (typeof body.auth_required === 'boolean') update.auth_required = body.auth_required;
 
+	// Switch inbound auth mode (none | api_key | oauth).
+	if (['none', 'api_key', 'oauth'].includes(body.authMode)) {
+		update.auth_mode = body.authMode;
+		update.auth_required = body.authMode !== 'none';
+		if (body.authMode === 'oauth') {
+			// Ensure client credentials exist when enabling OAuth.
+			const { data: cur } = await supabase
+				.from('mcp_servers')
+				.select('oauth_client_id')
+				.eq('id', id)
+				.maybeSingle();
+			if (!cur?.oauth_client_id) {
+				update.oauth_client_id = `mcpify_${generateApiKey().slice(0, 24)}`;
+				update.oauth_client_secret = generateApiKey();
+			}
+		}
+	}
+
 	let newKey: string | undefined;
 	if (body.regenerateKey) {
 		newKey = generateApiKey();
 		update.api_key = newKey;
+	}
+	if (body.regenerateSecret) {
+		update.oauth_client_secret = generateApiKey();
 	}
 
 	const { data, error } = await supabase

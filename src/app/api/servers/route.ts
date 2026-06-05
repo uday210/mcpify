@@ -47,8 +47,13 @@ export async function POST(request: NextRequest) {
 	const body = await request.json();
 	const { connectionId, name, description, transportType, toolNames } = body;
 	const mode = body.mode === 'aggregate' ? 'aggregate' : 'single';
-	// Default to requiring auth unless the client explicitly opts out.
-	const authRequired = body.authRequired !== false;
+	// Inbound auth mode: none | api_key | oauth (fall back from legacy authRequired).
+	const authMode: string = ['none', 'api_key', 'oauth'].includes(body.authMode)
+		? body.authMode
+		: body.authRequired === false
+			? 'none'
+			: 'api_key';
+	const authRequired = authMode !== 'none';
 	if (!name || !transportType) {
 		return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 	}
@@ -116,6 +121,8 @@ export async function POST(request: NextRequest) {
 	const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 	const slug = await uniqueSlug(supabase, body.slug || name);
 	const apiKey = generateApiKey();
+	const oauthClientId = authMode === 'oauth' ? `mcpify_${generateApiKey().slice(0, 24)}` : null;
+	const oauthClientSecret = authMode === 'oauth' ? generateApiKey() : null;
 
 	const { data: server, error: serverError } = await supabase
 		.from('mcp_servers')
@@ -129,6 +136,9 @@ export async function POST(request: NextRequest) {
 			base_url: `${appUrl}/api/mcp/${slug}`,
 			api_key: apiKey,
 			auth_required: authRequired,
+			auth_mode: authMode,
+			oauth_client_id: oauthClientId,
+			oauth_client_secret: oauthClientSecret,
 			mode,
 			enabled_tools: toolRows.map((t) => t.name),
 		})

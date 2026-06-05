@@ -182,6 +182,9 @@ export type Database = {
 					base_url: string;
 					api_key: string;
 					auth_required: boolean;
+					auth_mode: string;
+					oauth_client_id: string | null;
+					oauth_client_secret: string | null;
 					mode: string;
 					enabled_tools: string[];
 					enabled_resources: string[];
@@ -205,6 +208,9 @@ export type Database = {
 					base_url: string;
 					api_key: string;
 					auth_required?: boolean;
+					auth_mode?: string;
+					oauth_client_id?: string | null;
+					oauth_client_secret?: string | null;
 					mode?: string;
 					enabled_tools?: string[];
 					enabled_resources?: string[];
@@ -216,6 +222,9 @@ export type Database = {
 					enabled_resources?: string[];
 					is_active?: boolean;
 					auth_required?: boolean;
+					auth_mode?: string;
+					oauth_client_id?: string | null;
+					oauth_client_secret?: string | null;
 					last_error?: string | null;
 					last_accessed_at?: string | null;
 					access_count?: number;

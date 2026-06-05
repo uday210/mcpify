@@ -15,17 +15,25 @@ export function signState(payload: Record<string, any>): string {
 }
 
 export function verifyState(state: string): Record<string, any> | null {
-	const [body, sig] = (state || '').split('.');
+	return verifyToken(state, 10 * 60 * 1000);
+}
+
+/** Sign an HMAC token (used for MCP server OAuth access tokens). Same format as state. */
+export function signToken(payload: Record<string, any>): string {
+	return signState(payload);
+}
+
+/** Verify an HMAC token and enforce a max age (ms). Returns the payload or null. */
+export function verifyToken(token: string, maxAgeMs: number): Record<string, any> | null {
+	const [body, sig] = (token || '').split('.');
 	if (!body || !sig) return null;
 	const expected = crypto.createHmac('sha256', secret()).update(body).digest('base64url');
-	// Constant-time compare.
 	if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
 		return null;
 	}
 	try {
 		const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-		// Reject states older than 10 minutes.
-		if (Date.now() - (data.t || 0) > 10 * 60 * 1000) return null;
+		if (Date.now() - (data.t || 0) > maxAgeMs) return null;
 		return data;
 	} catch {
 		return null;

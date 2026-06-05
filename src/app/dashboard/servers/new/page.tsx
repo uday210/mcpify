@@ -25,7 +25,7 @@ export default function NewServerPage() {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [name, setName] = useState('');
 	const [transport, setTransport] = useState('http_stream');
-	const [authRequired, setAuthRequired] = useState(true);
+	const [authMode, setAuthMode] = useState<'api_key' | 'oauth' | 'none'>('api_key');
 	const [mode, setMode] = useState<'single' | 'aggregate'>('single');
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export default function NewServerPage() {
 					connectionId: mode === 'single' ? connectionId : undefined,
 					name,
 					transportType: transport,
-					authRequired,
+					authMode,
 					toolNames: mode === 'single' ? Array.from(selected) : undefined,
 				}),
 			});
@@ -97,21 +97,7 @@ export default function NewServerPage() {
 
 	if (created) {
 		const mcpUrl = created.base_url;
-		const claudeConfig = JSON.stringify(
-			{
-				mcpServers: {
-					[created.slug]: {
-						type: transport === 'sse' ? 'sse' : 'http',
-						url: mcpUrl,
-						...(authRequired
-							? { headers: { Authorization: `Bearer ${created.apiKey}` } }
-							: {}),
-					},
-				},
-			},
-			null,
-			2
-		);
+		const tokenUrl = `${mcpUrl}/token`;
 		return (
 			<div className="max-w-2xl">
 				<div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -120,27 +106,28 @@ export default function NewServerPage() {
 						<h1 className="text-2xl font-bold text-slate-900">Server created</h1>
 					</div>
 					<p className="text-slate-500 mb-6">
-						Copy your API key now — it is shown only once.
+						Copy your credentials now and finish setup on the next screen.
 					</p>
 
 					<div className="space-y-4">
 						<Field label="MCP URL" value={mcpUrl} />
-						{authRequired ? (
-							<Field label="API Key" value={created.apiKey} mono />
-						) : (
+						{authMode === 'api_key' && <Field label="API Key" value={created.apiKey} mono />}
+						{authMode === 'oauth' && (
+							<>
+								<Field label="Token endpoint" value={tokenUrl} />
+								<Field label="Client ID" value={created.oauth_client_id} mono />
+								<Field label="Client Secret" value={created.oauth_client_secret} mono />
+								<div className="px-3 py-2 bg-cyan-50 border border-cyan-200 rounded-lg text-xs text-cyan-800">
+									External systems POST these to the token endpoint (grant_type=client_credentials) to
+									get a bearer token for the MCP URL.
+								</div>
+							</>
+						)}
+						{authMode === 'none' && (
 							<div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-								This server is <strong>public</strong> — no API key required to call it.
+								This server is <strong>public</strong> — no auth required to call it.
 							</div>
 						)}
-						<div>
-							<div className="flex items-center justify-between mb-1">
-								<label className={labelCls}>Claude / MCP client config</label>
-								<CopyButton value={claudeConfig} label="Copy config" />
-							</div>
-							<pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 overflow-x-auto">
-								{claudeConfig}
-							</pre>
-						</div>
 					</div>
 
 					<div className="flex gap-3 mt-6">
@@ -255,16 +242,17 @@ export default function NewServerPage() {
 
 					<div>
 						<label className={labelCls}>Access</label>
-						<div className="grid grid-cols-2 gap-3">
+						<div className="grid grid-cols-3 gap-3">
 							{[
-								{ v: true, label: 'API Key', desc: 'Require a bearer key' },
-								{ v: false, label: 'No auth (public)', desc: 'Anyone with the URL' },
+								{ v: 'api_key' as const, label: 'API Key', desc: 'A bearer key' },
+								{ v: 'oauth' as const, label: 'OAuth', desc: 'Client ID + secret' },
+								{ v: 'none' as const, label: 'No auth', desc: 'Public URL' },
 							].map((a) => (
 								<button
-									key={String(a.v)}
-									onClick={() => setAuthRequired(a.v)}
+									key={a.v}
+									onClick={() => setAuthMode(a.v)}
 									className={`text-left p-3 rounded-lg border-2 transition ${
-										authRequired === a.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
+										authMode === a.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
 									}`}
 								>
 									<div className="font-medium text-slate-900">{a.label}</div>
@@ -272,7 +260,13 @@ export default function NewServerPage() {
 								</button>
 							))}
 						</div>
-						{!authRequired && (
+						{authMode === 'oauth' && (
+							<p className="text-xs text-slate-500 mt-2">
+								mcpify will issue a client ID + secret. External systems exchange them at the server&apos;s
+								token endpoint for a bearer token (OAuth 2.0 client credentials).
+							</p>
+						)}
+						{authMode === 'none' && (
 							<p className="text-xs text-amber-600 mt-2">
 								Anyone with the URL can call this server and use your stored credentials. Use with care.
 							</p>
