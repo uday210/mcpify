@@ -6,7 +6,7 @@ import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink 
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
-type AuthType = 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth';
+type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth';
 
 interface CatalogApp {
 	slug: string;
@@ -416,6 +416,7 @@ export default function NewConnectionPage() {
 					<div>
 						<label className={labelCls}>Authentication</label>
 						<select className={input} value={authType} onChange={(e) => setAuthType(e.target.value as AuthType)}>
+							<option value="none">None (public API)</option>
 							<option value="api_key">API Key</option>
 							<option value="bearer">Bearer Token</option>
 							<option value="basic">Basic Auth</option>

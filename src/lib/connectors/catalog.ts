@@ -222,7 +222,7 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		],
 	},
 	todoist: {
-		baseUrl: 'https://api.todoist.com/rest/v2',
+		baseUrl: 'https://api.todoist.com/api/v1',
 		tools: [
 			tool('get_tasks', 'List active tasks.', 'GET', '/tasks', [
 				{ name: 'project_id', in: 'query' },
@@ -449,6 +449,75 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('geocode', 'Forward geocode a place name.', 'GET', '/geocoding/v5/mapbox.places/{query}.json', [
 				{ name: 'query', in: 'path', required: true, description: 'Place to look up' },
 			]),
+		],
+	},
+	// --- No-auth utility APIs (work out of the box, no credentials) ---
+	coingecko: {
+		baseUrl: 'https://api.coingecko.com/api/v3',
+		tools: [
+			tool('simple_price', 'Crypto prices.', 'GET', '/simple/price', [
+				{ name: 'ids', in: 'query', required: true, description: 'e.g. bitcoin,ethereum' },
+				{ name: 'vs_currencies', in: 'query', required: true, description: 'e.g. usd,eur' },
+			]),
+			tool('coins_markets', 'Market data for coins.', 'GET', '/coins/markets', [
+				{ name: 'vs_currency', in: 'query', required: true, description: 'e.g. usd' },
+				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	openmeteo: {
+		baseUrl: 'https://api.open-meteo.com/v1',
+		tools: [
+			tool('forecast', 'Weather forecast by coordinates.', 'GET', '/forecast', [
+				{ name: 'latitude', in: 'query', required: true, type: 'number' },
+				{ name: 'longitude', in: 'query', required: true, type: 'number' },
+				{ name: 'current', in: 'query', description: 'e.g. temperature_2m,wind_speed_10m' },
+				{ name: 'daily', in: 'query', description: 'e.g. temperature_2m_max' },
+			]),
+		],
+	},
+	restcountries: {
+		baseUrl: 'https://restcountries.com/v3.1',
+		tools: [
+			tool('by_name', 'Look up a country by name.', 'GET', '/name/{name}', [{ name: 'name', in: 'path', required: true }]),
+			tool('all_countries', 'List countries (fields required).', 'GET', '/all', [
+				{ name: 'fields', in: 'query', required: true, description: 'e.g. name,capital,region' },
+			]),
+		],
+	},
+	frankfurter: {
+		baseUrl: 'https://api.frankfurter.dev/v1',
+		tools: [
+			tool('latest_rates', 'Latest FX rates.', 'GET', '/latest', [
+				{ name: 'base', in: 'query', description: 'e.g. USD' },
+				{ name: 'symbols', in: 'query', description: 'e.g. EUR,GBP' },
+			]),
+		],
+	},
+	hackernews: {
+		baseUrl: 'https://hacker-news.firebaseio.com/v0',
+		tools: [
+			tool('top_stories', 'IDs of the top stories.', 'GET', '/topstories.json', []),
+			tool('get_item', 'Get a story/comment by id.', 'GET', '/item/{id}.json', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	// --- Keyed ---
+	ipinfo: {
+		baseUrl: 'https://ipinfo.io',
+		tools: [tool('lookup_ip', 'Geolocate an IP address.', 'GET', '/{ip}/json', [{ name: 'ip', in: 'path', required: true }])],
+	},
+	shortcut: {
+		baseUrl: 'https://api.app.shortcut.com/api/v3',
+		tools: [
+			tool('get_current_member', 'Get the current member.', 'GET', '/member', []),
+			tool('list_projects', 'List projects.', 'GET', '/projects', []),
+		],
+	},
+	bitbucket: {
+		baseUrl: 'https://api.bitbucket.org/2.0',
+		tools: [
+			tool('get_user', 'Get the authenticated user.', 'GET', '/user', []),
+			tool('list_workspaces', 'List your workspaces.', 'GET', '/workspaces', []),
 		],
 	},
 };
