@@ -17,7 +17,9 @@
       "Bash(git ls-remote *)",
       "Bash([ -f \"$F\" ])",
       "Bash(echo \"exists\")",
-      "Bash(echo \"creating\")"
+      "Bash(echo \"creating\")",
+      "Bash(npx next *)",
+      "Bash(npm ls *)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
