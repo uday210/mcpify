@@ -15,3 +15,7 @@ restartPolicyMaxRetries = 3
 #   JWT_SECRET                     (openssl rand -hex 32)
 #   CREDENTIALS_ENCRYPTION_KEY     (openssl rand -hex 32)
 #   NEXT_PUBLIC_APP_URL            (your public Railway URL, e.g. https://mcpify.up.railway.app)
+#
+# Node 20+ is required (Next.js 15 / React 19). Node version is pinned via
+# .nvmrc and package.json "engines". If the builder still picks Node 18, also
+# add a build variable:  NIXPACKS_NODE_VERSION=20

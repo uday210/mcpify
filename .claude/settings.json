@@ -14,7 +14,10 @@
       "Bash(echo \"name: $\\(git config --global user.name\\)\")",
       "Bash(echo \"email: $\\(git config --global user.email\\)\")",
       "Bash(echo \"helper: $\\(git config --global credential.helper\\)\")",
-      "Bash(git ls-remote *)"
+      "Bash(git ls-remote *)",
+      "Bash([ -f \"$F\" ])",
+      "Bash(echo \"exists\")",
+      "Bash(echo \"creating\")"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
