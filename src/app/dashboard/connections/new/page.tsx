@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
@@ -17,6 +17,9 @@ interface CatalogApp {
 	supports_oauth: boolean;
 	base_url: string;
 	logo_url: string | null;
+	api_documentation_url: string | null;
+	tools: { name: string; description: string }[];
+	toolCount: number;
 }
 
 interface ManualTool {
@@ -236,31 +239,79 @@ export default function NewConnectionPage() {
 								onChange={(e) => setCatalogQuery(e.target.value)}
 							/>
 						</div>
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
-							{apps
-								.filter((a) =>
-									(a.name + ' ' + a.description).toLowerCase().includes(catalogQuery.toLowerCase())
-								)
-								.map((a) => (
-									<button
-										key={a.slug}
-										onClick={() => pickApp(a)}
-										className={`flex flex-col items-center text-center gap-2 p-3 rounded-xl border transition ${
-											appSlug === a.slug
-												? 'border-cyan-500 bg-cyan-50 ring-1 ring-cyan-200'
-												: 'border-slate-200 hover:border-cyan-300 hover:shadow-sm'
-										}`}
-									>
-										<AppIcon src={a.logo_url} name={a.name} size={36} />
-										<div className="text-sm font-medium text-slate-900 leading-tight">{a.name}</div>
-									</button>
-								))}
+						<div className="grid md:grid-cols-5 gap-4">
+							{/* App grid */}
+							<div className="md:col-span-2 grid grid-cols-3 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
+								{apps
+									.filter((a) =>
+										(a.name + ' ' + a.description).toLowerCase().includes(catalogQuery.toLowerCase())
+									)
+									.map((a) => (
+										<button
+											key={a.slug}
+											onClick={() => pickApp(a)}
+											className={`flex flex-col items-center text-center gap-2 p-3 rounded-xl border transition ${
+												appSlug === a.slug
+													? 'border-cyan-500 bg-cyan-50 ring-1 ring-cyan-200'
+													: 'border-slate-200 hover:border-cyan-300 hover:shadow-sm'
+											}`}
+										>
+											<AppIcon src={a.logo_url} name={a.name} size={32} />
+											<div className="text-xs font-medium text-slate-900 leading-tight">{a.name}</div>
+										</button>
+									))}
+							</div>
+
+							{/* Selected app detail / setup guide */}
+							<div className="md:col-span-3">
+								{selectedApp ? (
+									<div className="rounded-xl border border-slate-200 p-4 h-full">
+										<div className="flex items-center gap-3 mb-3">
+											<AppIcon src={selectedApp.logo_url} name={selectedApp.name} size={40} />
+											<div>
+												<div className="font-semibold text-slate-900">{selectedApp.name}</div>
+												<div className="text-xs text-slate-500">{selectedApp.toolCount} tools · {selectedApp.auth_type}</div>
+											</div>
+										</div>
+										<p className="text-sm text-slate-600 mb-3">{selectedApp.description}</p>
+
+										<div className="mb-3">
+											<div className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">How to connect</div>
+											<p className="text-sm text-slate-600">{selectedApp.auth_help || 'Provide your credentials below.'}</p>
+											{selectedApp.api_documentation_url && (
+												<a
+													href={selectedApp.api_documentation_url}
+													target="_blank"
+													rel="noreferrer"
+													className="inline-flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-700 mt-1.5"
+												>
+													API documentation <ExternalLink className="w-3 h-3" />
+												</a>
+											)}
+										</div>
+
+										<div>
+											<div className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Tools</div>
+											<div className="flex flex-wrap gap-1.5">
+												{selectedApp.tools.map((t) => (
+													<span
+														key={t.name}
+														title={t.description}
+														className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-mono"
+													>
+														{t.name}
+													</span>
+												))}
+											</div>
+										</div>
+									</div>
+								) : (
+									<div className="rounded-xl border border-dashed border-slate-200 p-6 h-full flex items-center justify-center text-center text-sm text-slate-400">
+										Select an app to see setup instructions and tools.
+									</div>
+								)}
+							</div>
 						</div>
-						{selectedApp?.auth_help && (
-							<p className="text-xs text-slate-500 mt-3 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-								💡 {selectedApp.auth_help}
-							</p>
-						)}
 					</div>
 				)}
 

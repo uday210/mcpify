@@ -382,6 +382,75 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_organizations', 'List your organizations.', 'GET', '/v1/organizations', []),
 		],
 	},
+	dropbox: {
+		baseUrl: 'https://api.dropboxapi.com/2',
+		tools: [
+			tool('list_folder', 'List files/folders in a path.', 'POST', '/files/list_folder', [
+				{ name: 'path', in: 'body', required: true, description: 'e.g. "" for root or "/Docs"' },
+			]),
+			tool('get_current_account', 'Get the current account.', 'POST', '/users/get_current_account', []),
+		],
+	},
+	clickup: {
+		baseUrl: 'https://api.clickup.com/api/v2',
+		tools: [
+			tool('get_authorized_user', 'Get the authorized user.', 'GET', '/user', []),
+			tool('get_teams', 'List workspaces (teams).', 'GET', '/team', []),
+			tool('get_tasks', 'List tasks in a list.', 'GET', '/list/{list_id}/task', [{ name: 'list_id', in: 'path', required: true }]),
+		],
+	},
+	monday: {
+		baseUrl: 'https://api.monday.com/v2',
+		tools: [
+			tool('run_graphql', 'Run a monday.com GraphQL query.', 'POST', '/', [
+				{ name: 'query', in: 'body', required: true, description: 'GraphQL, e.g. { boards(limit:5){ id name } }' },
+			]),
+		],
+	},
+	webflow: {
+		baseUrl: 'https://api.webflow.com/v2',
+		tools: [
+			tool('list_sites', 'List your Webflow sites.', 'GET', '/sites', []),
+			tool('list_collections', 'List collections for a site.', 'GET', '/sites/{site_id}/collections', [
+				{ name: 'site_id', in: 'path', required: true },
+			]),
+		],
+	},
+	pipedrive: {
+		baseUrl: 'https://api.pipedrive.com/v1',
+		tools: [
+			tool('list_deals', 'List deals.', 'GET', '/deals', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_persons', 'List persons.', 'GET', '/persons', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('search_deals', 'Search deals.', 'GET', '/deals/search', [{ name: 'term', in: 'query', required: true }]),
+		],
+	},
+	sentry: {
+		baseUrl: 'https://sentry.io/api/0',
+		tools: [
+			tool('list_projects', 'List your projects.', 'GET', '/projects/', []),
+			tool('list_issues', 'List issues for a project.', 'GET', '/projects/{org}/{project}/issues/', [
+				{ name: 'org', in: 'path', required: true },
+				{ name: 'project', in: 'path', required: true },
+			]),
+		],
+	},
+	posthog: {
+		baseUrl: 'https://us.posthog.com',
+		tools: [
+			tool('list_projects', 'List your projects.', 'GET', '/api/projects/', []),
+			tool('list_insights', 'List insights for a project.', 'GET', '/api/projects/{project_id}/insights/', [
+				{ name: 'project_id', in: 'path', required: true },
+			]),
+		],
+	},
+	mapbox: {
+		baseUrl: 'https://api.mapbox.com',
+		tools: [
+			tool('geocode', 'Forward geocode a place name.', 'GET', '/geocoding/v5/mapbox.places/{query}.json', [
+				{ name: 'query', in: 'path', required: true, description: 'Place to look up' },
+			]),
+		],
+	},
 };
 
 export function getCatalogConnector(slug: string): CatalogConnector | null {

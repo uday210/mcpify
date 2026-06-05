@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { faviconFor } from '@/lib/favicon';
+import { getCatalogConnector } from '@/lib/connectors/catalog';
 
 /** GET /api/catalog — seeded catalog apps for the connection wizard. */
 export async function GET() {
@@ -13,17 +14,23 @@ export async function GET() {
 
 	if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-	const apps = (data || []).map((a: any) => ({
-		id: a.id,
-		name: a.name,
-		slug: a.slug,
-		description: a.description,
-		logo_url: faviconFor(a.base_url) || a.logo_url,
-		base_url: a.base_url,
-		auth_type: a.auth_type,
-		api_documentation_url: a.api_documentation_url,
-		auth_help: a.config?.auth_help || null,
-		supports_oauth: !!a.config?.oauth,
-	}));
+	const apps = (data || []).map((a: any) => {
+		const connector = getCatalogConnector(a.slug);
+		const tools = (connector?.tools || []).map((t) => ({ name: t.name, description: t.description }));
+		return {
+			id: a.id,
+			name: a.name,
+			slug: a.slug,
+			description: a.description,
+			logo_url: faviconFor(a.base_url) || a.logo_url,
+			base_url: a.base_url,
+			auth_type: a.auth_type,
+			api_documentation_url: a.api_documentation_url,
+			auth_help: a.config?.auth_help || null,
+			supports_oauth: !!a.config?.oauth,
+			tools,
+			toolCount: tools.length,
+		};
+	});
 	return NextResponse.json(apps);
 }
