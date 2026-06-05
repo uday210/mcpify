@@ -25,6 +25,7 @@ export default function NewServerPage() {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [name, setName] = useState('');
 	const [transport, setTransport] = useState('http_stream');
+	const [authRequired, setAuthRequired] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [created, setCreated] = useState<any>(null);
@@ -70,6 +71,7 @@ export default function NewServerPage() {
 					connectionId,
 					name,
 					transportType: transport,
+					authRequired,
 					toolNames: Array.from(selected),
 				}),
 			});
@@ -97,7 +99,9 @@ export default function NewServerPage() {
 					[created.slug]: {
 						type: transport === 'sse' ? 'sse' : 'http',
 						url: mcpUrl,
-						headers: { Authorization: `Bearer ${created.apiKey}` },
+						...(authRequired
+							? { headers: { Authorization: `Bearer ${created.apiKey}` } }
+							: {}),
 					},
 				},
 			},
@@ -117,7 +121,13 @@ export default function NewServerPage() {
 
 					<div className="space-y-4">
 						<Field label="MCP URL" value={mcpUrl} />
-						<Field label="API Key" value={created.apiKey} mono />
+						{authRequired ? (
+							<Field label="API Key" value={created.apiKey} mono />
+						) : (
+							<div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+								This server is <strong>public</strong> — no API key required to call it.
+							</div>
+						)}
 						<div>
 							<div className="flex items-center justify-between mb-1">
 								<label className={labelCls}>Claude / MCP client config</label>
@@ -208,6 +218,32 @@ export default function NewServerPage() {
 								</button>
 							))}
 						</div>
+					</div>
+
+					<div>
+						<label className={labelCls}>Access</label>
+						<div className="grid grid-cols-2 gap-3">
+							{[
+								{ v: true, label: 'API Key', desc: 'Require a bearer key' },
+								{ v: false, label: 'No auth (public)', desc: 'Anyone with the URL' },
+							].map((a) => (
+								<button
+									key={String(a.v)}
+									onClick={() => setAuthRequired(a.v)}
+									className={`text-left p-3 rounded-lg border-2 transition ${
+										authRequired === a.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
+									}`}
+								>
+									<div className="font-medium text-slate-900">{a.label}</div>
+									<div className="text-xs text-slate-500">{a.desc}</div>
+								</button>
+							))}
+						</div>
+						{!authRequired && (
+							<p className="text-xs text-amber-600 mt-2">
+								Anyone with the URL can call this server and use your stored credentials. Use with care.
+							</p>
+						)}
 					</div>
 
 					{tools.length > 0 && (

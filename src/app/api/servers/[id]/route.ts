@@ -54,6 +54,7 @@ export async function PATCH(
 	if (typeof body.name === 'string') update.name = body.name;
 	if (typeof body.description === 'string') update.description = body.description;
 	if (typeof body.is_active === 'boolean') update.is_active = body.is_active;
+	if (typeof body.auth_required === 'boolean') update.auth_required = body.auth_required;
 
 	let newKey: string | undefined;
 	if (body.regenerateKey) {

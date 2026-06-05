@@ -19,7 +19,9 @@
       "Bash(echo \"exists\")",
       "Bash(echo \"creating\")",
       "Bash(npx next *)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(grep '^SUPABASE_SERVICE_ROLE_KEY=' .env.local)",
+      "Bash(python3 -c 'import sys,json; d=sys.stdin.read\\(\\); *)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

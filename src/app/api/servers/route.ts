@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
 
 	const body = await request.json();
 	const { connectionId, name, description, transportType, toolNames } = body;
+	// Default to requiring auth unless the client explicitly opts out.
+	const authRequired = body.authRequired !== false;
 	if (!connectionId || !name || !transportType) {
 		return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 	}
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
 			transport_type: transportType,
 			base_url: `${appUrl}/api/mcp/${slug}`,
 			api_key: apiKey,
+			auth_required: authRequired,
 			enabled_tools: toolNames || [],
 		})
 		.select()

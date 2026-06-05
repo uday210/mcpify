@@ -16,8 +16,6 @@ export async function authenticateServer(
 	slug: string,
 	presentedKey: string | null
 ): Promise<AuthedServer | null> {
-	if (!presentedKey) return null;
-
 	const admin = createAdminClient();
 
 	const { data: server } = await admin
@@ -28,6 +26,13 @@ export async function authenticateServer(
 		.maybeSingle();
 
 	if (!server) return null;
+
+	// Public servers skip key validation entirely.
+	if (server.auth_required === false) {
+		return { server, connection: (server as any).app_connections };
+	}
+
+	if (!presentedKey) return null;
 
 	let authorized = false;
 

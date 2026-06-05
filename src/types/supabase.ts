@@ -179,6 +179,7 @@ export type Database = {
 					transport_type: string;
 					base_url: string;
 					api_key: string;
+					auth_required: boolean;
 					enabled_tools: string[];
 					enabled_resources: string[];
 					timeout_ms: number;
@@ -200,6 +201,7 @@ export type Database = {
 					transport_type: string;
 					base_url: string;
 					api_key: string;
+					auth_required?: boolean;
 					enabled_tools?: string[];
 					enabled_resources?: string[];
 				};
@@ -209,6 +211,7 @@ export type Database = {
 					enabled_tools?: string[];
 					enabled_resources?: string[];
 					is_active?: boolean;
+					auth_required?: boolean;
 					last_error?: string | null;
 					last_accessed_at?: string | null;
 					access_count?: number;

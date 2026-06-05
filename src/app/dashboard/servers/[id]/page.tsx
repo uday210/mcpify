@@ -129,23 +129,49 @@ export default function ServerDetailPage() {
 			{/* Connection details */}
 			<div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 mb-6">
 				<Field label="MCP URL" value={server.base_url} />
+
 				<div>
 					<div className="flex items-center justify-between mb-1">
-						<label className={labelCls}>API Key</label>
-						<div className="flex items-center gap-2">
-							<CopyButton value={server.api_key} />
-							<button
-								onClick={() => patch({ regenerateKey: true })}
-								className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-							>
-								<RotateCw className="w-3.5 h-3.5" /> Regenerate
-							</button>
-						</div>
+						<label className={labelCls}>Access</label>
+						<button
+							onClick={() => patch({ auth_required: !server.auth_required })}
+							className="text-xs text-cyan-600 hover:text-cyan-700"
+						>
+							{server.auth_required ? 'Make public (no auth)' : 'Require API key'}
+						</button>
 					</div>
-					<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
-						{server.api_key}
+					<div
+						className={`px-3 py-2 rounded-lg text-sm border ${
+							server.auth_required
+								? 'bg-slate-50 border-slate-200 text-slate-700'
+								: 'bg-amber-50 border-amber-200 text-amber-800'
+						}`}
+					>
+						{server.auth_required
+							? 'API key required to call this server.'
+							: 'Public — anyone with the URL can call this server.'}
 					</div>
 				</div>
+
+				{server.auth_required && (
+					<div>
+						<div className="flex items-center justify-between mb-1">
+							<label className={labelCls}>API Key</label>
+							<div className="flex items-center gap-2">
+								<CopyButton value={server.api_key} />
+								<button
+									onClick={() => patch({ regenerateKey: true })}
+									className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+								>
+									<RotateCw className="w-3.5 h-3.5" /> Regenerate
+								</button>
+							</div>
+						</div>
+						<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
+							{server.api_key}
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* Test console */}
