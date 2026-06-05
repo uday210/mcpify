@@ -15,7 +15,7 @@ export async function GET(
 
 	const { data, error } = await supabase
 		.from('mcp_tools')
-		.select('id, name, description, http_method, path_template, enabled')
+		.select('id, name, description, http_method, path_template, enabled, input_schema, param_map')
 		.eq('mcp_server_id', id)
 		.order('name');
 

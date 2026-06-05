@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Play, RotateCw, Trash2, Power } from 'lucide-react';
+import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import ServerConnect from '@/components/ServerConnect';
+import ToolTester from '@/components/ToolTester';
 import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
 
 export default function ServerDetailPage() {
@@ -15,13 +16,6 @@ export default function ServerDetailPage() {
 	const [server, setServer] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
 
-	// test console
-	const [method, setMethod] = useState('tools/list');
-	const [toolName, setToolName] = useState('');
-	const [argsText, setArgsText] = useState('{}');
-	const [testResult, setTestResult] = useState<string>('');
-	const [running, setRunning] = useState(false);
-
 	const [auto, setAuto] = useState(true);
 	const [tools, setTools] = useState<any[]>([]);
 	const [toolsDirty, setToolsDirty] = useState(false);
@@ -30,10 +24,7 @@ export default function ServerDetailPage() {
 	const load = () => {
 		fetch(`/api/servers/${id}`)
 			.then((r) => r.json())
-			.then((d) => {
-				setServer(d);
-				setToolName((cur) => cur || d.tools?.[0]?.name || '');
-			})
+			.then((d) => setServer(d))
 			.finally(() => setLoading(false));
 	};
 	useEffect(load, [id]);
@@ -74,35 +65,6 @@ export default function ServerDetailPage() {
 		return () => clearInterval(t);
 	}, [auto, id]);
 
-	const runTest = async () => {
-		setRunning(true);
-		setTestResult('');
-		try {
-			const body: any = { method };
-			if (method === 'tools/call') {
-				body.name = toolName;
-				try {
-					body.arguments = JSON.parse(argsText || '{}');
-				} catch {
-					setTestResult('Arguments must be valid JSON.');
-					setRunning(false);
-					return;
-				}
-			}
-			const r = await fetch(`/api/servers/${id}/test`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body),
-			});
-			const d = await r.json();
-			setTestResult(JSON.stringify(d, null, 2));
-		} catch (e: any) {
-			setTestResult(e?.message || 'Request failed');
-		} finally {
-			setRunning(false);
-		}
-	};
-
 	const patch = async (payload: any) => {
 		const r = await fetch(`/api/servers/${id}`, {
 			method: 'PATCH',
@@ -136,7 +98,6 @@ export default function ServerDetailPage() {
 	}
 
 	const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
-	const input = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-cyan-500';
 
 	return (
 		<div className="max-w-3xl">
@@ -264,44 +225,8 @@ export default function ServerDetailPage() {
 			/>
 
 			{/* Test console */}
-			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-				<h2 className="font-semibold text-slate-900 mb-4">Test console</h2>
-				<div className="flex gap-2 mb-3">
-					<select className={input} value={method} onChange={(e) => setMethod(e.target.value)}>
-						<option value="tools/list">tools/list</option>
-						<option value="tools/call">tools/call</option>
-					</select>
-					{method === 'tools/call' && (
-						<select className={input} value={toolName} onChange={(e) => setToolName(e.target.value)}>
-							{(server.tools || []).map((t: any) => (
-								<option key={t.name} value={t.name}>
-									{t.name}
-								</option>
-							))}
-						</select>
-					)}
-					<button
-						onClick={runTest}
-						disabled={running}
-						className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 whitespace-nowrap"
-					>
-						<Play className="w-4 h-4" />
-						{running ? 'Running…' : 'Run'}
-					</button>
-				</div>
-				{method === 'tools/call' && (
-					<textarea
-						className={`${input} font-mono text-xs h-24 mb-3`}
-						value={argsText}
-						onChange={(e) => setArgsText(e.target.value)}
-						placeholder='{ "owner": "vercel", "repo": "next.js" }'
-					/>
-				)}
-				{testResult && (
-					<pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 overflow-x-auto max-h-80">
-						{testResult}
-					</pre>
-				)}
+			<div className="mb-6">
+				<ToolTester serverId={id} tools={tools} />
 			</div>
 
 			{/* Tools (curate) */}
@@ -374,10 +299,10 @@ export default function ServerDetailPage() {
 					: 0;
 				return (
 					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-						<Stat label="Total calls" value={server.access_count || 0} />
-						<Stat label="Errors (all time)" value={server.error_count || 0} tone={server.error_count ? 'bad' : 'good'} />
-						<Stat label="Avg latency (recent)" value={`${avg}ms`} />
-						<Stat label="Errors (recent)" value={recentErr} tone={recentErr ? 'bad' : 'good'} />
+						<Stat label="Total calls" value={server.access_count || 0} icon={ActivityIcon} />
+						<Stat label="Errors (all time)" value={server.error_count || 0} tone={server.error_count ? 'bad' : 'good'} icon={AlertTriangle} />
+						<Stat label="Avg latency" value={`${avg}ms`} icon={Gauge} />
+						<Stat label="Errors (recent)" value={recentErr} tone={recentErr ? 'bad' : 'good'} icon={AlertTriangle} />
 					</div>
 				);
 			})()}

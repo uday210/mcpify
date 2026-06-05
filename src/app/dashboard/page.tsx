@@ -77,7 +77,7 @@ export default function DashboardPage() {
 						<Link
 							key={s.id}
 							href={`/dashboard/servers/${s.id}`}
-							className="group bg-white rounded-xl border border-slate-200 p-5 hover:border-cyan-300 hover:shadow-md transition"
+							className="group bg-white rounded-2xl border border-slate-200/70 shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 hover:border-cyan-300 transition-all"
 						>
 							<div className="flex items-start gap-3 mb-3">
 								{s.mode === 'aggregate' ? (

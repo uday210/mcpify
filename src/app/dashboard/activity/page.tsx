@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Activity as ActivityIcon, AlertTriangle, Percent, Gauge } from 'lucide-react';
 import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
 
 export default function ActivityPage() {
@@ -54,10 +54,10 @@ export default function ActivityPage() {
 			) : (
 				<>
 					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-						<Stat label="Calls (recent)" value={stats.total} />
-						<Stat label="Errors" value={stats.errors} tone={stats.errors ? 'bad' : 'good'} />
-						<Stat label="Error rate" value={`${stats.errorRate}%`} tone={stats.errorRate > 10 ? 'bad' : 'default'} />
-						<Stat label="Avg latency" value={`${stats.avgLatency}ms`} />
+						<Stat label="Calls (recent)" value={stats.total} icon={ActivityIcon} />
+						<Stat label="Errors" value={stats.errors} tone={stats.errors ? 'bad' : 'good'} icon={AlertTriangle} />
+						<Stat label="Error rate" value={`${stats.errorRate}%`} tone={stats.errorRate > 10 ? 'bad' : 'default'} icon={Percent} />
+						<Stat label="Avg latency" value={`${stats.avgLatency}ms`} icon={Gauge} />
 					</div>
 
 					<div className="mb-6">

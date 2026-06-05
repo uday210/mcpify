@@ -9,17 +9,31 @@ export function Stat({
 	label,
 	value,
 	tone = 'default',
+	icon: Icon,
 }: {
 	label: string;
 	value: string | number;
 	tone?: 'default' | 'good' | 'bad';
+	icon?: any;
 }) {
-	const color =
-		tone === 'good' ? 'text-green-600' : tone === 'bad' ? 'text-red-600' : 'text-slate-900';
+	const color = tone === 'good' ? 'text-emerald-600' : tone === 'bad' ? 'text-red-600' : 'text-slate-900';
+	const tile =
+		tone === 'good'
+			? 'from-emerald-500/15 to-emerald-600/15 text-emerald-600'
+			: tone === 'bad'
+				? 'from-red-500/15 to-red-600/15 text-red-600'
+				: 'from-cyan-500/15 to-blue-600/15 text-cyan-600';
 	return (
-		<div className="bg-white rounded-xl border border-slate-200 p-4">
-			<div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
-			<div className={`text-2xl font-bold mt-1 ${color}`}>{value}</div>
+		<div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-4 flex items-center gap-3">
+			{Icon && (
+				<div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${tile} flex items-center justify-center shrink-0`}>
+					<Icon className="w-5 h-5" />
+				</div>
+			)}
+			<div className="min-w-0">
+				<div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
+				<div className={`text-2xl font-bold ${color}`}>{value}</div>
+			</div>
 		</div>
 	);
 }

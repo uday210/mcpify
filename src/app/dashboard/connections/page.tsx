@@ -112,7 +112,7 @@ function ConnectionsInner() {
 					{connections.map((c) => (
 						<div
 							key={c.id}
-							className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between hover:border-slate-300 transition"
+							className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-5 flex items-center justify-between hover:shadow-md hover:border-cyan-200 transition-all"
 						>
 							<div className="flex items-center gap-4 min-w-0">
 								<AppIcon src={c.logo_url} name={c.name} size={40} />
