@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
@@ -63,29 +63,51 @@ export default function NewConnectionPage() {
 		{ name: '', http_method: 'GET', path_template: '/', query: '', body: '' },
 	]);
 
+	const [externalApps, setExternalApps] = useState<any[]>([]);
+	const [searching, setSearching] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [catalogQuery, setCatalogQuery] = useState('');
+	const preselectDone = useRef(false);
 
+	// Search the catalog (curated + APIs.guru external directory), debounced.
 	useEffect(() => {
-		fetch('/api/catalog')
-			.then((r) => r.json())
-			.then((d) => {
-				const list: CatalogApp[] = Array.isArray(d) ? d : [];
-				setApps(list);
-				// Preselect from a marketplace deep link (/apps/[slug] → ?app=slug).
-				const want = new URLSearchParams(window.location.search).get('app');
-				if (want) {
-					const a = list.find((x) => x.slug === want);
-					if (a) {
-						setConnectorType('catalog');
-						pickApp(a);
-					}
-				}
-			})
-			.catch(() => {});
+		setSearching(true);
+		const t = setTimeout(
+			() => {
+				fetch(`/api/catalog/search?q=${encodeURIComponent(catalogQuery)}`)
+					.then((r) => r.json())
+					.then((d) => {
+						const list: CatalogApp[] = d.curated || [];
+						setApps(list);
+						setExternalApps(d.external || []);
+						if (!preselectDone.current) {
+							preselectDone.current = true;
+							const want = new URLSearchParams(window.location.search).get('app');
+							if (want) {
+								const a = list.find((x) => x.slug === want);
+								if (a) {
+									setConnectorType('catalog');
+									pickApp(a);
+								}
+							}
+						}
+					})
+					.catch(() => {})
+					.finally(() => setSearching(false));
+			},
+			catalogQuery ? 250 : 0
+		);
+		return () => clearTimeout(t);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [catalogQuery]);
+
+	// Import an external (APIs.guru) app via the OpenAPI connector.
+	const pickExternal = (a: any) => {
+		setConnectorType('openapi');
+		setOpenapiUrl(a.swaggerUrl);
+		setName((n) => n || a.name);
+	};
 
 	const selectedApp = apps.find((a) => a.slug === appSlug);
 
@@ -241,25 +263,22 @@ export default function NewConnectionPage() {
 					<div>
 						<div className="flex items-center justify-between mb-1">
 							<label className={labelCls}>Choose an app</label>
-							<span className="text-xs text-slate-400">{apps.length} apps</span>
+							<span className="text-xs text-slate-400">{searching ? 'searching…' : '2,500+ apps'}</span>
 						</div>
 						<div className="relative mb-3">
 							<Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
 							<input
 								className={`${input} pl-9`}
-								placeholder="Search apps…"
+								placeholder="Search 2,500+ apps (GitHub, Notion, Shopify, Twilio…)"
 								value={catalogQuery}
 								onChange={(e) => setCatalogQuery(e.target.value)}
 							/>
 						</div>
 						<div className="grid md:grid-cols-5 gap-4">
 							{/* App grid */}
-							<div className="md:col-span-2 grid grid-cols-3 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
-								{apps
-									.filter((a) =>
-										(a.name + ' ' + a.description).toLowerCase().includes(catalogQuery.toLowerCase())
-									)
-									.map((a) => (
+							<div className="md:col-span-2 max-h-80 overflow-y-auto pr-1 space-y-3">
+								<div className="grid grid-cols-3 md:grid-cols-2 gap-2">
+									{apps.map((a) => (
 										<button
 											key={a.slug}
 											onClick={() => pickApp(a)}
@@ -273,6 +292,33 @@ export default function NewConnectionPage() {
 											<div className="text-xs font-medium text-slate-900 leading-tight">{a.name}</div>
 										</button>
 									))}
+								</div>
+								{externalApps.length > 0 && (
+									<div>
+										<div className="text-[10px] uppercase tracking-wide text-slate-400 px-1 mb-1.5">
+											More via OpenAPI (APIs.guru)
+										</div>
+										<div className="space-y-1.5">
+											{externalApps.map((a) => (
+												<button
+													key={a.slug}
+													onClick={() => pickExternal(a)}
+													className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-slate-200 hover:border-cyan-300 hover:bg-slate-50 transition text-left"
+												>
+													<AppIcon src={a.logo_url} name={a.name} size={28} />
+													<div className="min-w-0 flex-1">
+														<div className="text-xs font-medium text-slate-800 truncate">{a.name}</div>
+														<div className="text-[10px] text-slate-400 truncate">{a.provider}</div>
+													</div>
+													<span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">OpenAPI</span>
+												</button>
+											))}
+										</div>
+									</div>
+								)}
+								{apps.length === 0 && externalApps.length === 0 && !searching && (
+									<p className="text-xs text-slate-400 px-1 py-4 text-center">No apps found.</p>
+								)}
 							</div>
 
 							{/* Selected app detail / setup guide */}
