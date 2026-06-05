@@ -15,6 +15,7 @@ interface CatalogApp {
 	auth_help: string | null;
 	supports_oauth: boolean;
 	base_url: string;
+	logo_url: string | null;
 }
 
 interface ManualTool {
@@ -226,14 +227,27 @@ export default function NewConnectionPage() {
 								<button
 									key={a.slug}
 									onClick={() => pickApp(a)}
-									className={`text-left p-3 rounded-lg border transition ${
+									className={`flex items-start gap-3 text-left p-3 rounded-lg border transition ${
 										appSlug === a.slug
 											? 'border-cyan-500 bg-cyan-50'
 											: 'border-slate-200 hover:border-slate-300'
 									}`}
 								>
-									<div className="font-medium text-slate-900">{a.name}</div>
-									<div className="text-xs text-slate-500 line-clamp-2">{a.description}</div>
+									{a.logo_url ? (
+										// eslint-disable-next-line @next/next/no-img-element
+										<img
+											src={a.logo_url}
+											alt=""
+											className="w-8 h-8 rounded shrink-0 object-contain bg-white"
+											onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')}
+										/>
+									) : (
+										<div className="w-8 h-8 rounded shrink-0 bg-slate-100" />
+									)}
+									<div className="min-w-0">
+										<div className="font-medium text-slate-900">{a.name}</div>
+										<div className="text-xs text-slate-500 line-clamp-2">{a.description}</div>
+									</div>
 								</button>
 							))}
 						</div>

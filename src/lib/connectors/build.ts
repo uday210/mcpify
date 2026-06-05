@@ -45,6 +45,7 @@ export async function buildConnectionInsert(
 		if (def.config?.oauth) config.oauth = { ...def.config.oauth };
 		if (def.config?.api_key_in) config.api_key_in = def.config.api_key_in;
 		if (def.config?.api_key_name) config.api_key_name = def.config.api_key_name;
+		if (def.config?.static_headers) config.static_headers = def.config.static_headers;
 	} else if (connectorType === 'openapi') {
 		let specText: string = body.openapiSpec || '';
 		if (!specText && body.openapiUrl) {

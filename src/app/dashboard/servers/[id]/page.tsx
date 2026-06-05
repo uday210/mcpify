@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Play, RotateCw, Trash2, Power } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
+import ServerConnect from '@/components/ServerConnect';
 
 export default function ServerDetailPage() {
 	const params = useParams();
@@ -173,6 +174,15 @@ export default function ServerDetailPage() {
 					</div>
 				)}
 			</div>
+
+			{/* Connect to a client */}
+			<ServerConnect
+				slug={server.slug}
+				url={server.base_url}
+				apiKey={server.api_key}
+				transport={server.transport_type}
+				authRequired={server.auth_required}
+			/>
 
 			{/* Test console */}
 			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">

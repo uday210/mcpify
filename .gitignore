@@ -34,3 +34,6 @@ supabase/.temp/
 
 # Railway
 railway.json
+
+# TypeScript incremental build info
+*.tsbuildinfo

@@ -76,6 +76,12 @@ export async function executeTool(
 			}
 		}
 
+		// --- Static headers configured on the connection (e.g. Notion-Version).
+		const staticHeaders = (connection.config || {}).static_headers;
+		if (staticHeaders && typeof staticHeaders === 'object') {
+			for (const [k, v] of Object.entries(staticHeaders)) headers[k] = String(v);
+		}
+
 		// --- Inject auth.
 		await applyAuth(connection, headers, query);
 
@@ -125,6 +131,10 @@ export async function pingConnection(
 	const headers: Record<string, string> = { Accept: 'application/json' };
 	const query = new URLSearchParams();
 	try {
+		const staticHeaders = (connection.config || {}).static_headers;
+		if (staticHeaders && typeof staticHeaders === 'object') {
+			for (const [k, v] of Object.entries(staticHeaders)) headers[k] = String(v);
+		}
 		await applyAuth(connection, headers, query);
 		const qs = query.toString();
 		const resp = await fetch(`${baseUrl}/${qs ? '?' + qs : ''}`, { method: 'GET', headers });
