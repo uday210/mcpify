@@ -23,7 +23,8 @@
       "Bash(grep '^SUPABASE_SERVICE_ROLE_KEY=' .env.local)",
       "Bash(python3 -c 'import sys,json; d=sys.stdin.read\\(\\); *)",
       "Bash(curl -s -m 20 \"https://api.apis.guru/v2/list.json\" -o /tmp/apisguru.json -w \"http %{http_code}, size %{size_download} bytes\\\\n\")",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(curl -s -m 40 \"https://api.github.com/repos/PipedreamHQ/pipedream/git/trees/master?recursive=1\" -o pd_tree.json -w \"http %{http_code}, size %{size_download}\\\\n\")"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

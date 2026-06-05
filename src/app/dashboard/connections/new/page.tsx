@@ -64,6 +64,7 @@ export default function NewConnectionPage() {
 	]);
 
 	const [externalApps, setExternalApps] = useState<any[]>([]);
+	const [directoryApps, setDirectoryApps] = useState<any[]>([]);
 	const [searching, setSearching] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function NewConnectionPage() {
 						const list: CatalogApp[] = d.curated || [];
 						setApps(list);
 						setExternalApps(d.external || []);
+						setDirectoryApps(d.directory || []);
 						if (!preselectDone.current) {
 							preselectDone.current = true;
 							const want = new URLSearchParams(window.location.search).get('app');
@@ -106,6 +108,12 @@ export default function NewConnectionPage() {
 	const pickExternal = (a: any) => {
 		setConnectorType('openapi');
 		setOpenapiUrl(a.swaggerUrl);
+		setName((n) => n || a.name);
+	};
+
+	// Directory app (Pipedream registry, no spec): route to OpenAPI/manual.
+	const pickDirectory = (a: any) => {
+		setConnectorType('openapi');
 		setName((n) => n || a.name);
 	};
 
@@ -240,6 +248,8 @@ export default function NewConnectionPage() {
 
 	const input = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-cyan-500';
 	const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
+	const redirectUri =
+		(typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_APP_URL || window.location.origin : '') + '/api/oauth/callback';
 
 	return (
 		<div className="max-w-2xl">
@@ -323,7 +333,25 @@ export default function NewConnectionPage() {
 										</div>
 									</div>
 								)}
-								{apps.length === 0 && externalApps.length === 0 && !searching && (
+								{directoryApps.length > 0 && (
+									<div>
+										<div className="text-[10px] uppercase tracking-wide text-slate-400 px-1 mb-1.5">
+											Browse 3,300+ apps (connect via OpenAPI/manual)
+										</div>
+										<div className="flex flex-wrap gap-1.5">
+											{directoryApps.map((a) => (
+												<button
+													key={a.slug}
+													onClick={() => pickDirectory(a)}
+													className="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-cyan-300 hover:bg-slate-50 text-xs text-slate-700 transition"
+												>
+													{a.name}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
+								{apps.length === 0 && externalApps.length === 0 && directoryApps.length === 0 && !searching && (
 									<p className="text-xs text-slate-400 px-1 py-4 text-center">No apps found.</p>
 								)}
 							</div>
@@ -572,8 +600,8 @@ export default function NewConnectionPage() {
 							</>
 						)}
 						<p className="text-xs text-slate-500">
-							You&apos;ll be redirected to authorize after saving. Set the provider&apos;s redirect URI to{' '}
-							<code className="bg-slate-100 px-1 rounded">{`{APP_URL}/api/oauth/callback`}</code>.
+							Add this <strong>exact</strong> redirect URI in your provider app, then save to authorize:
+							<code className="block mt-1 bg-slate-100 px-2 py-1.5 rounded break-all text-slate-700">{redirectUri}</code>
 						</p>
 					</div>
 				)}

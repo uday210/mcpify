@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { faviconFor } from '@/lib/favicon';
 import { getCatalogConnector } from '@/lib/connectors/catalog';
 import { searchExternalApps } from '@/lib/connectors/apisguru';
+import { searchDirectory } from '@/lib/connectors/pipedream';
 
 export const runtime = 'nodejs';
 
@@ -64,5 +65,15 @@ export async function GET(request: NextRequest) {
 		}
 	}
 
-	return NextResponse.json({ curated, external });
+	// Pipedream-scale directory (names only; connect via OpenAPI/manual). Exclude
+	// anything already shown as curated or external.
+	let directory: any[] = [];
+	if (q.length >= 2) {
+		const seen = new Set<string>([...curated, ...external].map((a: any) => a.name.toLowerCase()));
+		directory = searchDirectory(q, 24)
+			.filter((a) => !seen.has(a.name.toLowerCase()))
+			.map((a) => ({ slug: `pd:${a.slug}`, name: a.name, source: 'directory' as const }));
+	}
+
+	return NextResponse.json({ curated, external, directory });
 }
