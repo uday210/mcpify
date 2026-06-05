@@ -1,5 +1,7 @@
 'use client';
 
+import { Fragment, useState } from 'react';
+
 // Shared monitoring widgets used by the server detail page and the org-wide
 // Activity page: stat cards, an hourly calls bar chart, and a calls table.
 
@@ -84,12 +86,17 @@ interface CallRow {
 	client_ip?: string | null;
 	created_at: string;
 	server_name?: string;
+	request_body?: any;
+	response_body?: string | null;
 }
 
 export function CallsTable({ rows, showServer = false }: { rows: CallRow[]; showServer?: boolean }) {
+	const [open, setOpen] = useState<number | null>(null);
 	if (!rows.length) {
 		return <p className="text-sm text-slate-400">No requests yet.</p>;
 	}
+	const inspectable = (r: CallRow) =>
+		r.request_body != null || r.response_body != null || r.error_message != null;
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full text-sm">
@@ -106,23 +113,54 @@ export function CallsTable({ rows, showServer = false }: { rows: CallRow[]; show
 				<tbody>
 					{rows.map((r, i) => {
 						const err = (r.status_code || 0) >= 400;
+						const canInspect = inspectable(r);
 						return (
-							<tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-								<td className="py-2 pr-3">
-									<span
-										className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-											err ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-										}`}
-									>
-										{r.status_code ?? '—'}
-									</span>
-								</td>
-								{showServer && <td className="py-2 pr-3 text-slate-700">{r.server_name}</td>}
-								<td className="py-2 pr-3 font-mono text-xs text-slate-600">{r.method}</td>
-								<td className="py-2 pr-3 font-mono text-xs text-slate-800">{r.resource || '—'}</td>
-								<td className="py-2 pr-3 text-slate-500">{r.duration_ms != null ? `${r.duration_ms}ms` : '—'}</td>
-								<td className="py-2 pr-3 text-slate-400 whitespace-nowrap">{timeAgo(r.created_at)}</td>
-							</tr>
+							<Fragment key={i}>
+								<tr
+									className={`border-b border-slate-50 ${canInspect ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+									onClick={() => canInspect && setOpen(open === i ? null : i)}
+								>
+									<td className="py-2 pr-3">
+										<span
+											className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+												err ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+											}`}
+										>
+											{r.status_code ?? '—'}
+										</span>
+									</td>
+									{showServer && <td className="py-2 pr-3 text-slate-700">{r.server_name}</td>}
+									<td className="py-2 pr-3 font-mono text-xs text-slate-600">{r.method}</td>
+									<td className="py-2 pr-3 font-mono text-xs text-slate-800">{r.resource || '—'}</td>
+									<td className="py-2 pr-3 text-slate-500">{r.duration_ms != null ? `${r.duration_ms}ms` : '—'}</td>
+									<td className="py-2 pr-3 text-slate-400 whitespace-nowrap">{timeAgo(r.created_at)}</td>
+								</tr>
+								{open === i && canInspect && (
+									<tr>
+										<td colSpan={showServer ? 6 : 5} className="bg-slate-50 px-3 py-3">
+											{r.error_message && (
+												<div className="mb-2 text-xs text-red-600">⚠ {r.error_message}</div>
+											)}
+											{r.request_body != null && (
+												<div className="mb-2">
+													<div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Request</div>
+													<pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-3 overflow-x-auto max-h-48">
+														{JSON.stringify(r.request_body, null, 2)}
+													</pre>
+												</div>
+											)}
+											{r.response_body != null && (
+												<div>
+													<div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Response</div>
+													<pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-3 overflow-x-auto max-h-64">
+														{r.response_body}
+													</pre>
+												</div>
+											)}
+										</td>
+									</tr>
+								)}
+							</Fragment>
 						);
 					})}
 				</tbody>

@@ -70,8 +70,21 @@ export default function NewConnectionPage() {
 	useEffect(() => {
 		fetch('/api/catalog')
 			.then((r) => r.json())
-			.then((d) => setApps(Array.isArray(d) ? d : []))
+			.then((d) => {
+				const list: CatalogApp[] = Array.isArray(d) ? d : [];
+				setApps(list);
+				// Preselect from a marketplace deep link (/apps/[slug] → ?app=slug).
+				const want = new URLSearchParams(window.location.search).get('app');
+				if (want) {
+					const a = list.find((x) => x.slug === want);
+					if (a) {
+						setConnectorType('catalog');
+						pickApp(a);
+					}
+				}
+			})
 			.catch(() => {});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const selectedApp = apps.find((a) => a.slug === appSlug);

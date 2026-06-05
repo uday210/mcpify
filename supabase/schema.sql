@@ -816,3 +816,17 @@ VALUES
     'https://api.bitbucket.org/2.0', 'bearer', '{}', 'https://developer.atlassian.com/cloud/bitbucket/rest/intro/',
     '{"auth_help":"Create a repository/workspace access token or an app password (use as a Bearer token)."}'::jsonb)
 ON CONFLICT (slug) DO NOTHING;
+
+-- ============================================================
+-- supabase/migrations/013_log_payloads.sql
+-- ============================================================
+-- ============================================================================
+-- Migration 013: Capture request/response payloads for the call inspector
+-- ----------------------------------------------------------------------------
+-- Stores tool-call arguments and a (truncated) upstream response so the
+-- monitoring view can show what was sent and returned for each call.
+-- ============================================================================
+
+ALTER TABLE mcp_access_logs
+  ADD COLUMN IF NOT EXISTS request_body JSONB,
+  ADD COLUMN IF NOT EXISTS response_body TEXT;

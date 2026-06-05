@@ -29,7 +29,18 @@ export async function POST(
 	const { slug } = await params;
 	const authed = await authenticateServer(slug, extractKey(request));
 	if (!authed) {
-		return json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } }, 401);
+		const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+		return new Response(
+			JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } }),
+			{
+				status: 401,
+				headers: {
+					...CORS,
+					'Content-Type': 'application/json',
+					'WWW-Authenticate': `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+				},
+			}
+		);
 	}
 
 	let payload: any;

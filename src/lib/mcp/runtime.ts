@@ -63,6 +63,8 @@ export async function handleRpc(
 	let statusCode = 200;
 	let errorMessage: string | undefined;
 	let response: JsonRpcResponse | null;
+	let reqBody: any = null;
+	let respText: string | null = null;
 
 	try {
 		switch (req.method) {
@@ -131,6 +133,8 @@ export async function handleRpc(
 				}
 				const result = await executeTool(connection, tool, args);
 				statusCode = result.isError ? 502 : 200;
+				reqBody = args;
+				respText = result.content?.map((c: any) => c.text).join('\n').slice(0, 8000) || null;
 				response = rpcResult(id, { content: result.content, isError: result.isError });
 				break;
 			}
@@ -147,7 +151,7 @@ export async function handleRpc(
 
 	// Log meaningful calls (skip the chatty initialize/ping health traffic).
 	if (req.method === 'tools/call' || req.method === 'tools/list') {
-		await logAccess(server, req.method, resource, statusCode, Date.now() - started, errorMessage, meta);
+		await logAccess(server, req.method, resource, statusCode, Date.now() - started, errorMessage, meta, reqBody, respText);
 	}
 
 	return response;
@@ -160,7 +164,9 @@ async function logAccess(
 	statusCode: number,
 	durationMs: number,
 	errorMessage?: string,
-	meta: RequestMeta = {}
+	meta: RequestMeta = {},
+	requestBody: any = null,
+	responseBody: string | null = null
 ) {
 	try {
 		const admin = createAdminClient();
@@ -173,6 +179,8 @@ async function logAccess(
 			error_message: errorMessage || null,
 			client_ip: meta.clientIp || null,
 			user_agent: meta.userAgent || null,
+			request_body: requestBody || null,
+			response_body: responseBody || null,
 		});
 		await admin
 			.from('mcp_servers')

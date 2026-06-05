@@ -23,6 +23,9 @@ export default function ServerDetailPage() {
 	const [running, setRunning] = useState(false);
 
 	const [auto, setAuto] = useState(true);
+	const [tools, setTools] = useState<any[]>([]);
+	const [toolsDirty, setToolsDirty] = useState(false);
+	const [savingTools, setSavingTools] = useState(false);
 
 	const load = () => {
 		fetch(`/api/servers/${id}`)
@@ -34,6 +37,35 @@ export default function ServerDetailPage() {
 			.finally(() => setLoading(false));
 	};
 	useEffect(load, [id]);
+
+	const loadTools = () =>
+		fetch(`/api/servers/${id}/tools`)
+			.then((r) => r.json())
+			.then((d) => setTools(Array.isArray(d) ? d : []))
+			.catch(() => {});
+	useEffect(() => {
+		loadTools();
+	}, [id]);
+
+	const patchTool = (tid: string, p: any) => {
+		setTools((ts) => ts.map((t) => (t.id === tid ? { ...t, ...p } : t)));
+		setToolsDirty(true);
+	};
+	const saveTools = async () => {
+		setSavingTools(true);
+		try {
+			await fetch(`/api/servers/${id}/tools`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ tools: tools.map((t) => ({ id: t.id, enabled: t.enabled, name: t.name })) }),
+			});
+			setToolsDirty(false);
+			loadTools();
+			load();
+		} finally {
+			setSavingTools(false);
+		}
+	};
 
 	// Live-refresh the monitoring data.
 	useEffect(() => {
@@ -272,21 +304,51 @@ export default function ServerDetailPage() {
 				)}
 			</div>
 
-			{/* Tools */}
+			{/* Tools (curate) */}
 			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-				<h2 className="font-semibold text-slate-900 mb-4">Tools ({server.tools?.length || 0})</h2>
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="font-semibold text-slate-900">
+						Tools ({tools.filter((t) => t.enabled).length}/{tools.length})
+					</h2>
+					{toolsDirty && (
+						<button
+							onClick={saveTools}
+							disabled={savingTools}
+							className="px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
+						>
+							{savingTools ? 'Saving…' : 'Save changes'}
+						</button>
+					)}
+				</div>
+				<p className="text-xs text-slate-400 mb-3">Toggle tools on/off or rename them. Disabled tools aren’t exposed to clients.</p>
 				<div className="divide-y">
-					{(server.tools || []).map((t: any) => (
-						<div key={t.name} className="py-2 flex items-center gap-3">
-							<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center">
+					{tools.map((t: any) => (
+						<div key={t.id} className="py-2.5 flex items-center gap-3">
+							<button
+								onClick={() => patchTool(t.id, { enabled: !t.enabled })}
+								className={`relative w-9 h-5 rounded-full transition shrink-0 ${t.enabled ? 'bg-cyan-500' : 'bg-slate-300'}`}
+								title={t.enabled ? 'Enabled' : 'Disabled'}
+							>
+								<span
+									className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${t.enabled ? 'translate-x-4' : ''}`}
+								/>
+							</button>
+							<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center shrink-0">
 								{t.http_method}
 							</span>
-							<div>
-								<div className="text-sm font-mono text-slate-800">{t.name}</div>
-								<div className="text-xs text-slate-500">{t.description || t.path_template}</div>
-							</div>
+							<input
+								value={t.name}
+								onChange={(e) => patchTool(t.id, { name: e.target.value })}
+								className={`text-sm font-mono bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 flex-1 min-w-0 ${
+									t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
+								}`}
+							/>
+							<span className="text-xs text-slate-400 truncate hidden sm:block max-w-[40%]">
+								{t.description || t.path_template}
+							</span>
 						</div>
 					))}
+					{tools.length === 0 && <p className="text-sm text-slate-400 py-2">No tools.</p>}
 				</div>
 			</div>
 

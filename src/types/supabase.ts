@@ -254,6 +254,8 @@ export type Database = {
 					duration_ms?: number | null;
 					client_ip?: string | null;
 					user_agent?: string | null;
+					request_body?: Record<string, any> | null;
+					response_body?: string | null;
 				};
 			};
 			mcp_api_keys: {

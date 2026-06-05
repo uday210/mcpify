@@ -29,7 +29,7 @@ export async function GET(
 
 	const { data: logs } = await supabase
 		.from('mcp_access_logs')
-		.select('method, resource, status_code, duration_ms, error_message, client_ip, user_agent, created_at')
+		.select('method, resource, status_code, duration_ms, error_message, client_ip, user_agent, request_body, response_body, created_at')
 		.eq('mcp_server_id', id)
 		.order('created_at', { ascending: false })
 		.limit(200);
