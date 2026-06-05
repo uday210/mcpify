@@ -6,6 +6,17 @@ const nextConfig = {
   // Pin the workspace root so a parent lockfile doesn't confuse output tracing
   // (matters for the Railway/standalone build).
   outputFileTracingRoot: path.join(__dirname),
+  webpack: (config, { dev }) => {
+    // Disable the webpack filesystem cache for production builds. Railway/Nixpacks
+    // restores .next/cache between deploys; a stale chunk from an earlier build
+    // (e.g. the initial Node 18 one) was poisoning the error-page prerender
+    // ("<Html> should not be imported outside of pages/_document"). Compiling
+    // fresh every prod build avoids that class of failure entirely.
+    if (!dev) {
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;
