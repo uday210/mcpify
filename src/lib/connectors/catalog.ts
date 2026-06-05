@@ -520,6 +520,92 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_workspaces', 'List your workspaces.', 'GET', '/workspaces', []),
 		],
 	},
+	// --- More no-auth APIs ---
+	pokeapi: {
+		baseUrl: 'https://pokeapi.co/api/v2',
+		tools: [
+			tool('get_pokemon', 'Get a Pokémon by name or id.', 'GET', '/pokemon/{name}', [{ name: 'name', in: 'path', required: true }]),
+			tool('list_pokemon', 'List Pokémon.', 'GET', '/pokemon', [
+				{ name: 'limit', in: 'query', type: 'integer' },
+				{ name: 'offset', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	openlibrary: {
+		baseUrl: 'https://openlibrary.org',
+		tools: [
+			tool('search_books', 'Search books.', 'GET', '/search.json', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	jsonplaceholder: {
+		baseUrl: 'https://jsonplaceholder.typicode.com',
+		tools: [
+			tool('list_posts', 'List sample posts.', 'GET', '/posts', [{ name: 'userId', in: 'query', type: 'integer' }]),
+			tool('get_post', 'Get a post by id.', 'GET', '/posts/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('create_post', 'Create a (fake) post.', 'POST', '/posts', [
+				{ name: 'title', in: 'body', required: true },
+				{ name: 'body', in: 'body' },
+				{ name: 'userId', in: 'body', type: 'integer' },
+			]),
+		],
+	},
+	dogceo: {
+		baseUrl: 'https://dog.ceo/api',
+		tools: [
+			tool('random_dog', 'Random dog image.', 'GET', '/breeds/image/random', []),
+			tool('list_breeds', 'List all breeds.', 'GET', '/breeds/list/all', []),
+		],
+	},
+	// --- Finance / media (keyed) ---
+	alphavantage: {
+		baseUrl: 'https://www.alphavantage.co',
+		tools: [
+			tool('quote', 'Stock data. Set function (e.g. GLOBAL_QUOTE) + symbol.', 'GET', '/query', [
+				{ name: 'function', in: 'query', required: true, description: 'e.g. GLOBAL_QUOTE, TIME_SERIES_DAILY' },
+				{ name: 'symbol', in: 'query', required: true, description: 'e.g. IBM' },
+			]),
+		],
+	},
+	finnhub: {
+		baseUrl: 'https://finnhub.io/api/v1',
+		tools: [
+			tool('quote', 'Real-time stock quote.', 'GET', '/quote', [{ name: 'symbol', in: 'query', required: true }]),
+			tool('company_profile', 'Company profile.', 'GET', '/stock/profile2', [{ name: 'symbol', in: 'query', required: true }]),
+		],
+	},
+	weatherapi: {
+		baseUrl: 'https://api.weatherapi.com/v1',
+		tools: [
+			tool('current', 'Current weather.', 'GET', '/current.json', [{ name: 'q', in: 'query', required: true, description: 'City / lat,lon' }]),
+			tool('forecast', 'Weather forecast.', 'GET', '/forecast.json', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'days', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	youtube: {
+		baseUrl: 'https://www.googleapis.com/youtube/v3',
+		tools: [
+			tool('search', 'Search YouTube.', 'GET', '/search', [
+				{ name: 'part', in: 'query', required: true, description: 'snippet' },
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'maxResults', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	gnews: {
+		baseUrl: 'https://gnews.io/api/v4',
+		tools: [
+			tool('search', 'Search news articles.', 'GET', '/search', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'lang', in: 'query', description: 'e.g. en' },
+			]),
+			tool('top_headlines', 'Top headlines.', 'GET', '/top-headlines', [{ name: 'category', in: 'query' }]),
+		],
+	},
 };
 
 export function getCatalogConnector(slug: string): CatalogConnector | null {

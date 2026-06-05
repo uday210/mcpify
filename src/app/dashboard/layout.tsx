@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Boxes, Server, Plug, Activity, LogOut, Menu, X } from 'lucide-react';
+import { Boxes, Server, Plug, Activity, LogOut, Menu, X, Search } from 'lucide-react';
 import Toaster from '@/components/Toaster';
+import CommandPalette from '@/components/CommandPalette';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const [email, setEmail] = useState<string>('');
@@ -40,6 +41,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 				</div>
 				<span className="text-xl font-bold text-white">mcpify</span>
 			</Link>
+			<button
+				onClick={() => window.dispatchEvent(new Event('mcpify-cmdk'))}
+				className="flex items-center gap-2 w-full px-3 py-2 mb-3 rounded-lg text-sm bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition"
+			>
+				<Search className="w-4 h-4" />
+				<span>Search…</span>
+				<kbd className="ml-auto text-[10px] border border-white/15 rounded px-1.5 py-0.5">⌘K</kbd>
+			</button>
 			<nav className="space-y-1 flex-1">
 				{nav.map(({ href, label, icon: Icon, exact }) => (
 					<Link
@@ -105,6 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 				<div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
 			</main>
 			<Toaster />
+			<CommandPalette />
 		</div>
 	);
 }
