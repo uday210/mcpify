@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { faviconFor } from '@/lib/favicon';
 
-/** GET /api/connections/:id — connection detail incl. its tool catalog. */
+/** GET /api/connections/:id — connection detail, tools, and servers using it. */
 export async function GET(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
@@ -22,9 +23,32 @@ export async function GET(
 	if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 	if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-	// Expose the tool catalog but not credentials/secrets.
+	// Servers using this connection: directly bound (single) + via aggregate tools.
+	const { data: direct } = await supabase
+		.from('mcp_servers')
+		.select('id, name, slug, mode, is_active, access_count')
+		.eq('app_connection_id', id);
+
+	const { data: viaTools } = await supabase
+		.from('mcp_tools')
+		.select('mcp_servers(id, name, slug, mode, is_active, access_count)')
+		.eq('app_connection_id', id);
+
+	const byId = new Map<string, any>();
+	for (const s of direct || []) byId.set(s.id, s);
+	for (const row of viaTools || []) {
+		const s = (row as any).mcp_servers;
+		if (s && !byId.has(s.id)) byId.set(s.id, s);
+	}
+
 	const tools = Array.isArray((data as any).config?.tools) ? (data as any).config.tools : [];
-	return NextResponse.json({ ...data, tools, config: undefined });
+	return NextResponse.json({
+		...data,
+		logo_url: faviconFor((data as any).base_url),
+		tools,
+		servers: Array.from(byId.values()),
+		config: undefined,
+	});
 }
 
 /** PATCH /api/connections/:id — rename / toggle active. */

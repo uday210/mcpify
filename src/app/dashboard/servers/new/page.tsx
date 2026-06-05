@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Check } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
+import AppIcon from '@/components/AppIcon';
 
 interface Connection {
 	id: string;
 	name: string;
 	connector_type: string;
 	is_active: boolean;
+	logo_url: string | null;
+	toolCount: number;
 }
 interface Tool {
 	name: string;
@@ -34,7 +37,12 @@ export default function NewServerPage() {
 	useEffect(() => {
 		fetch('/api/connections')
 			.then((r) => r.json())
-			.then((d) => setConnections(Array.isArray(d) ? d : []))
+			.then((d) => {
+				const list = Array.isArray(d) ? d : [];
+				setConnections(list);
+				const want = new URLSearchParams(window.location.search).get('connection');
+				if (want && list.find((c: Connection) => c.id === want)) setConnectionId(want);
+			})
 			.catch(() => {});
 	}, []);
 
@@ -203,14 +211,28 @@ export default function NewServerPage() {
 					) : (
 						<div>
 							<label className={labelCls}>Connection</label>
-							<select className={input} value={connectionId} onChange={(e) => setConnectionId(e.target.value)}>
-								<option value="">Select a connection…</option>
+							<div className="grid sm:grid-cols-2 gap-2.5">
 								{connections.map((c) => (
-									<option key={c.id} value={c.id}>
-										{c.name} ({c.connector_type})
-									</option>
+									<button
+										key={c.id}
+										onClick={() => setConnectionId(c.id)}
+										className={`flex items-center gap-3 text-left p-3 rounded-xl border transition ${
+											connectionId === c.id
+												? 'border-cyan-500 bg-cyan-50 ring-1 ring-cyan-200'
+												: 'border-slate-200 hover:border-cyan-300 hover:shadow-sm'
+										}`}
+									>
+										<AppIcon src={c.logo_url} name={c.name} size={36} />
+										<div className="min-w-0 flex-1">
+											<div className="text-sm font-medium text-slate-900 truncate">{c.name}</div>
+											<div className="text-xs text-slate-400">
+												{c.connector_type} · {c.toolCount} tools
+											</div>
+										</div>
+										{connectionId === c.id && <Check className="w-4 h-4 text-cyan-600 shrink-0" />}
+									</button>
 								))}
-							</select>
+							</div>
 						</div>
 					)}
 

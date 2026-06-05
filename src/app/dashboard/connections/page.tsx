@@ -74,12 +74,12 @@ function ConnectionsInner() {
 		<div>
 			<div className="flex justify-between items-center mb-8">
 				<div>
-					<h1 className="text-3xl font-bold text-slate-900">Connections</h1>
+					<h1 className="text-3xl font-bold tracking-tight text-slate-900">Connections</h1>
 					<p className="text-slate-500 mt-1">Authenticated links to your cloud apps.</p>
 				</div>
 				<Link
 					href="/dashboard/connections/new"
-					className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium"
+					className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:shadow-lift transition font-medium"
 				>
 					<Plus className="w-5 h-5" />
 					New Connection
@@ -87,9 +87,7 @@ function ConnectionsInner() {
 			</div>
 
 			{notice && (
-				<div className="mb-6 p-3 bg-cyan-50 border border-cyan-200 text-cyan-800 rounded-lg text-sm">
-					{notice}
-				</div>
+				<div className="mb-6 p-3 bg-cyan-50 border border-cyan-200 text-cyan-800 rounded-lg text-sm">{notice}</div>
 			)}
 
 			{loading ? (
@@ -105,15 +103,15 @@ function ConnectionsInner() {
 					))}
 				</div>
 			) : connections.length === 0 ? (
-				<div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-					<Plug className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+				<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-12 text-center">
+					<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/15 to-blue-600/15 flex items-center justify-center mx-auto mb-4">
+						<Plug className="w-7 h-7 text-cyan-600" />
+					</div>
 					<h3 className="text-lg font-semibold text-slate-900 mb-1">No connections yet</h3>
-					<p className="text-slate-500 mb-6">
-						Connect a catalog app, an OpenAPI spec, or define endpoints manually.
-					</p>
+					<p className="text-slate-500 mb-6">Connect a catalog app, an OpenAPI spec, or define endpoints manually.</p>
 					<Link
 						href="/dashboard/connections/new"
-						className="inline-block px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition"
+						className="inline-block px-5 py-2.5 bg-cyan-600 text-white rounded-xl hover:bg-cyan-700 transition"
 					>
 						New Connection
 					</Link>
@@ -123,19 +121,17 @@ function ConnectionsInner() {
 					{connections.map((c) => (
 						<div
 							key={c.id}
-							className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-5 flex items-center justify-between hover:shadow-md hover:border-cyan-200 transition-all"
+							className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5 flex items-center justify-between hover:shadow-md hover:border-cyan-200 transition-all"
 						>
-							<div className="flex items-center gap-4 min-w-0">
+							<Link href={`/dashboard/connections/${c.id}`} className="flex items-center gap-4 min-w-0 group flex-1">
 								<AppIcon src={c.logo_url} name={c.name} size={40} />
 								<div className="min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
-										<h3 className="font-semibold text-slate-900">{c.name}</h3>
+										<h3 className="font-semibold text-slate-900 group-hover:text-cyan-600 transition">{c.name}</h3>
 										<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 capitalize">
 											{c.connector_type}
 										</span>
-										<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
-											{c.auth_type}
-										</span>
+										<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">{c.auth_type}</span>
 									</div>
 									<p className="text-xs text-slate-400 mt-1 font-mono truncate">{c.base_url}</p>
 									<div className="flex items-center gap-3 mt-2 text-xs">
@@ -157,7 +153,7 @@ function ConnectionsInner() {
 										)}
 									</div>
 								</div>
-							</div>
+							</Link>
 							<div className="flex items-center gap-2 shrink-0">
 								<button
 									onClick={() => verify(c.id)}
