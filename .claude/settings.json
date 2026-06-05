@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "mcp__claude_ai_Supabase__restore_project",
+      "mcp__claude_ai_Supabase__get_project",
+      "Bash(openssl rand *)",
+      "Bash(echo \"JWT_SECRET=$\\(openssl rand -hex 32\\)\")",
+      "Bash(echo \"CREDENTIALS_ENCRYPTION_KEY=$\\(openssl rand -hex 32\\)\")",
+      "Bash(rm -rf \"src/app/api/mcp/[serverId]\" && echo \"removed old route\" && find src/app/api/mcp -type d)",
+      "Bash(git config *)",
+      "Bash(echo \"name: $\\(git config --global user.name\\)\")",
+      "Bash(echo \"email: $\\(git config --global user.email\\)\")",
+      "Bash(echo \"helper: $\\(git config --global credential.helper\\)\")",
+      "Bash(git ls-remote *)"
+    ],
+    "additionalDirectories": [
+      "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
+    ]
+  }
+}

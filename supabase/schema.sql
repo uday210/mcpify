@@ -1,0 +1,506 @@
+-- mcpify consolidated schema — paste into the Supabase SQL editor (runs 001→004 in order).
+-- Safe to re-run; statements use IF NOT EXISTS / DROP IF EXISTS where needed.
+
+-- ============================================================
+-- supabase/migrations/001_initial_schema.sql
+-- ============================================================
+-- Users and Authentication (handled by Supabase Auth)
+-- profiles table for user metadata
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  avatar_url TEXT,
+  company_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Organizations for multi-tenant support
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  logo_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Organization members
+CREATE TABLE IF NOT EXISTS org_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  role TEXT DEFAULT 'member', -- owner, admin, member
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(org_id, user_id)
+);
+
+-- Cloud Application Definitions (connectors for different cloud services)
+CREATE TABLE IF NOT EXISTS app_definitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE, -- e.g., "Stripe", "Salesforce", "HubSpot"
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  logo_url TEXT,
+  base_url TEXT,
+  auth_type TEXT NOT NULL, -- oauth, api_key, basic_auth, custom
+  scope_permissions TEXT[] DEFAULT '{}', -- required OAuth scopes
+  api_documentation_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Cloud Application Connections (user's authenticated connections to cloud apps)
+CREATE TABLE IF NOT EXISTS app_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
+  app_def_id UUID REFERENCES app_definitions(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL, -- User's friendly name for this connection
+  auth_type TEXT NOT NULL, -- oauth, api_key, basic_auth
+  -- Encrypted credential storage (hex string from lib/encryption.ts)
+  credentials TEXT, -- Encrypted JSON of credentials (null until configured)
+  -- OAuth specific
+  oauth_token TEXT, -- Encrypted access token
+  oauth_refresh_token TEXT, -- Encrypted refresh token
+  oauth_expires_at TIMESTAMP WITH TIME ZONE,
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  last_verified_at TIMESTAMP WITH TIME ZONE,
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MCP Server Configurations (generated MCP servers)
+CREATE TABLE IF NOT EXISTS mcp_servers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
+  app_connection_id UUID REFERENCES app_connections(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT,
+  -- Protocol configuration
+  transport_type TEXT NOT NULL, -- sse, http_stream, websocket
+  base_url TEXT NOT NULL,
+  api_key TEXT NOT NULL UNIQUE, -- For authentication
+  -- Tools and Resources to expose
+  enabled_tools TEXT[] DEFAULT '{}',
+  enabled_resources TEXT[] DEFAULT '{}',
+  -- Configuration
+  timeout_ms INTEGER DEFAULT 30000,
+  max_connections INTEGER DEFAULT 100,
+  -- Status and monitoring
+  is_active BOOLEAN DEFAULT TRUE,
+  last_accessed_at TIMESTAMP WITH TIME ZONE,
+  access_count INTEGER DEFAULT 0,
+  error_count INTEGER DEFAULT 0,
+  last_error TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(org_id, slug)
+);
+
+-- MCP Server Access Logs (audit trail)
+CREATE TABLE IF NOT EXISTS mcp_access_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mcp_server_id UUID REFERENCES mcp_servers(id) ON DELETE CASCADE NOT NULL,
+  method TEXT NOT NULL, -- list_tools, call_tool, etc
+  resource TEXT,
+  status_code INTEGER,
+  error_message TEXT,
+  duration_ms INTEGER,
+  client_ip TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- API Keys for MCP Servers (additional keys for same server)
+CREATE TABLE IF NOT EXISTS mcp_api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mcp_server_id UUID REFERENCES mcp_servers(id) ON DELETE CASCADE NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE,
+  name TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  last_used_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES profiles(id)
+);
+
+-- Sample Requests/Responses (for testing and documentation)
+CREATE TABLE IF NOT EXISTS mcp_samples (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mcp_server_id UUID REFERENCES mcp_servers(id) ON DELETE CASCADE NOT NULL,
+  tool_name TEXT NOT NULL,
+  sample_input JSONB,
+  sample_output JSONB,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- API Documentation Cache
+CREATE TABLE IF NOT EXISTS app_api_docs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  app_def_id UUID REFERENCES app_definitions(id) ON DELETE CASCADE NOT NULL,
+  spec_version TEXT,
+  spec_content JSONB, -- OpenAPI/Swagger spec
+  endpoint_count INTEGER,
+  last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+CREATE INDEX IF NOT EXISTS idx_organizations_owner ON organizations(owner_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_app_connections_org ON app_connections(org_id);
+CREATE INDEX IF NOT EXISTS idx_mcp_servers_org ON mcp_servers(org_id);
+CREATE INDEX IF NOT EXISTS idx_mcp_servers_connection ON mcp_servers(app_connection_id);
+CREATE INDEX IF NOT EXISTS idx_mcp_access_logs_server ON mcp_access_logs(mcp_server_id);
+CREATE INDEX IF NOT EXISTS idx_mcp_access_logs_created ON mcp_access_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_app_defs_active ON app_definitions(is_active);
+
+-- ============================================================
+-- supabase/migrations/002_rls_policies.sql
+-- ============================================================
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Enable RLS (Row Level Security)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mcp_access_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mcp_api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mcp_samples ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for profiles
+CREATE POLICY "Users can view their own profile"
+  ON profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile"
+  ON profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- RLS Policies for organizations
+CREATE POLICY "Users can view organizations they are members of"
+  ON organizations FOR SELECT
+  USING (
+    id IN (
+      SELECT org_id FROM org_members WHERE user_id = auth.uid()
+    )
+    OR owner_id = auth.uid()
+  );
+
+-- RLS Policies for org_members
+CREATE POLICY "Members can view their organization members"
+  ON org_members FOR SELECT
+  USING (
+    org_id IN (
+      SELECT org_id FROM org_members WHERE user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for app_connections
+CREATE POLICY "Users can view connections in their organizations"
+  ON app_connections FOR SELECT
+  USING (
+    org_id IN (
+      SELECT org_id FROM org_members WHERE user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for mcp_servers
+CREATE POLICY "Users can view MCP servers in their organizations"
+  ON mcp_servers FOR SELECT
+  USING (
+    org_id IN (
+      SELECT org_id FROM org_members WHERE user_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for mcp_access_logs (read only)
+CREATE POLICY "Users can view logs for their servers"
+  ON mcp_access_logs FOR SELECT
+  USING (
+    mcp_server_id IN (
+      SELECT id FROM mcp_servers 
+      WHERE org_id IN (
+        SELECT org_id FROM org_members WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Triggers for updated_at
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_profiles_timestamp BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_organizations_timestamp BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_app_definitions_timestamp BEFORE UPDATE ON app_definitions
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_app_connections_timestamp BEFORE UPDATE ON app_connections
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_mcp_servers_timestamp BEFORE UPDATE ON mcp_servers
+  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ============================================================
+-- supabase/migrations/003_connector_and_tools.sql
+-- ============================================================
+-- ============================================================================
+-- Migration 003: Connector model + generated MCP tools
+-- ----------------------------------------------------------------------------
+-- Adds the columns that let a connection be backed by a catalog app, an
+-- OpenAPI spec, or a manually defined set of endpoints, and introduces the
+-- mcp_tools table that the MCP runtime serves from.
+-- ============================================================================
+
+-- --- app_definitions: store catalog connector metadata (oauth endpoints, etc)
+ALTER TABLE app_definitions
+  ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;
+
+-- --- app_connections: support custom (non-catalog) connectors
+ALTER TABLE app_connections
+  ALTER COLUMN app_def_id DROP NOT NULL;
+
+ALTER TABLE app_connections
+  ADD COLUMN IF NOT EXISTS connector_type TEXT NOT NULL DEFAULT 'catalog', -- catalog | openapi | manual
+  ADD COLUMN IF NOT EXISTS base_url TEXT,
+  -- config holds connector-specific settings:
+  --   api_key_in/api_key_name (api_key auth), header_name (custom auth),
+  --   oauth { authorize_url, token_url, client_id, client_secret(enc), scopes }
+  ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb,
+  -- raw OpenAPI document (for re-generating tools later)
+  ADD COLUMN IF NOT EXISTS openapi_spec JSONB;
+
+-- --- mcp_tools: one row per tool exposed by an MCP server
+CREATE TABLE IF NOT EXISTS mcp_tools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mcp_server_id UUID REFERENCES mcp_servers(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  -- JSON Schema describing tool arguments (MCP inputSchema)
+  input_schema JSONB NOT NULL DEFAULT '{"type":"object","properties":{}}'::jsonb,
+  -- How to build the upstream HTTP request
+  http_method TEXT NOT NULL DEFAULT 'GET',
+  path_template TEXT NOT NULL DEFAULT '/', -- e.g. /repos/{owner}/{repo}/issues
+  -- param_map: array of { name, in: path|query|header|body, required }
+  param_map JSONB NOT NULL DEFAULT '[]'::jsonb,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(mcp_server_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mcp_tools_server ON mcp_tools(mcp_server_id);
+
+-- The slug routes the public MCP URL (/api/mcp/<slug>) so it must be globally
+-- unique, not just unique per organization.
+ALTER TABLE mcp_servers DROP CONSTRAINT IF EXISTS mcp_servers_slug_global_unique;
+ALTER TABLE mcp_servers ADD CONSTRAINT mcp_servers_slug_global_unique UNIQUE (slug);
+
+-- --- Seed a few catalog connectors. Tool sets for these live in
+-- --- src/lib/connectors/catalog.ts; this row carries metadata + auth config.
+INSERT INTO app_definitions (name, slug, description, logo_url, base_url, auth_type, scope_permissions, api_documentation_url, config)
+VALUES
+  (
+    'GitHub', 'github',
+    'Repos, issues, pull requests and more via the GitHub REST API.',
+    'https://github.githubassets.com/favicons/favicon.svg',
+    'https://api.github.com', 'bearer', '{}',
+    'https://docs.github.com/rest',
+    '{"oauth":{"authorize_url":"https://github.com/login/oauth/authorize","token_url":"https://github.com/login/oauth/access_token","scopes":["repo","read:user"]},"auth_help":"Create a Personal Access Token at https://github.com/settings/tokens, or use OAuth."}'::jsonb
+  ),
+  (
+    'Stripe', 'stripe',
+    'Payments, customers, invoices and subscriptions via the Stripe API.',
+    'https://stripe.com/favicon.ico',
+    'https://api.stripe.com', 'bearer', '{}',
+    'https://stripe.com/docs/api',
+    '{"auth_help":"Use a Secret API key (sk_...) from https://dashboard.stripe.com/apikeys."}'::jsonb
+  ),
+  (
+    'OpenWeather', 'openweather',
+    'Current weather and forecasts via the OpenWeather API.',
+    'https://openweathermap.org/favicon.ico',
+    'https://api.openweathermap.org', 'api_key', '{}',
+    'https://openweathermap.org/api',
+    '{"api_key_in":"query","api_key_name":"appid","auth_help":"Get a free API key at https://home.openweathermap.org/api_keys."}'::jsonb
+  )
+ON CONFLICT (slug) DO NOTHING;
+
+-- ============================================================
+-- supabase/migrations/004_auth_and_rls.sql
+-- ============================================================
+-- ============================================================================
+-- Migration 004: New-user bootstrap trigger + complete RLS policies
+-- ----------------------------------------------------------------------------
+-- 002 only granted SELECT and its org_members policy was self-recursive. This
+-- migration adds a SECURITY DEFINER helper (user_org_ids) to break recursion,
+-- a handle_new_user trigger that provisions a profile + personal org, and full
+-- CRUD policies scoped by organization membership.
+-- ============================================================================
+
+-- --- Helper: org ids the current user belongs to (SECURITY DEFINER bypasses
+-- --- RLS on org_members so policies that reference it don't recurse).
+CREATE OR REPLACE FUNCTION public.user_org_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT org_id FROM org_members WHERE user_id = auth.uid()
+$$;
+
+-- --- On signup: create profile + a personal organization + owner membership.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_org_id UUID;
+  display_name TEXT;
+BEGIN
+  display_name := COALESCE(
+    NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+    split_part(NEW.email, '@', 1)
+  );
+
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (NEW.id, NEW.email, display_name)
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.organizations (owner_id, name, slug)
+  VALUES (
+    NEW.id,
+    display_name || '''s workspace',
+    'org-' || substr(replace(NEW.id::text, '-', ''), 1, 16)
+  )
+  RETURNING id INTO new_org_id;
+
+  INSERT INTO public.org_members (org_id, user_id, role)
+  VALUES (new_org_id, NEW.id, 'owner');
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- --- Ensure RLS is on for tables added in 003.
+ALTER TABLE mcp_tools ENABLE ROW LEVEL SECURITY;
+
+-- --- Drop the policies defined in 002 so we can recreate a complete set.
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can view organizations they are members of" ON organizations;
+DROP POLICY IF EXISTS "Members can view their organization members" ON org_members;
+DROP POLICY IF EXISTS "Users can view connections in their organizations" ON app_connections;
+DROP POLICY IF EXISTS "Users can view MCP servers in their organizations" ON mcp_servers;
+DROP POLICY IF EXISTS "Users can view logs for their servers" ON mcp_access_logs;
+
+-- ============================ profiles =====================================
+CREATE POLICY "profiles_select_own" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "profiles_insert_own" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_update_own" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- ============================ app_definitions (catalog, public read) =======
+CREATE POLICY "app_definitions_read" ON app_definitions
+  FOR SELECT USING (true);
+
+-- ============================ organizations ================================
+CREATE POLICY "organizations_select" ON organizations
+  FOR SELECT USING (id IN (SELECT public.user_org_ids()) OR owner_id = auth.uid());
+CREATE POLICY "organizations_insert" ON organizations
+  FOR INSERT WITH CHECK (owner_id = auth.uid());
+CREATE POLICY "organizations_update" ON organizations
+  FOR UPDATE USING (owner_id = auth.uid());
+CREATE POLICY "organizations_delete" ON organizations
+  FOR DELETE USING (owner_id = auth.uid());
+
+-- ============================ org_members ==================================
+CREATE POLICY "org_members_select" ON org_members
+  FOR SELECT USING (user_id = auth.uid() OR org_id IN (SELECT public.user_org_ids()));
+CREATE POLICY "org_members_insert" ON org_members
+  FOR INSERT WITH CHECK (
+    org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid())
+  );
+CREATE POLICY "org_members_delete" ON org_members
+  FOR DELETE USING (
+    org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid())
+  );
+
+-- ============================ app_connections ==============================
+CREATE POLICY "app_connections_all" ON app_connections
+  FOR ALL
+  USING (org_id IN (SELECT public.user_org_ids()))
+  WITH CHECK (org_id IN (SELECT public.user_org_ids()));
+
+-- ============================ mcp_servers ==================================
+CREATE POLICY "mcp_servers_all" ON mcp_servers
+  FOR ALL
+  USING (org_id IN (SELECT public.user_org_ids()))
+  WITH CHECK (org_id IN (SELECT public.user_org_ids()));
+
+-- ============================ mcp_tools ====================================
+CREATE POLICY "mcp_tools_all" ON mcp_tools
+  FOR ALL
+  USING (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  )
+  WITH CHECK (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  );
+
+-- ============================ mcp_api_keys =================================
+CREATE POLICY "mcp_api_keys_all" ON mcp_api_keys
+  FOR ALL
+  USING (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  )
+  WITH CHECK (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  );
+
+-- ============================ mcp_samples ==================================
+CREATE POLICY "mcp_samples_all" ON mcp_samples
+  FOR ALL
+  USING (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  )
+  WITH CHECK (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  );
+
+-- ============================ mcp_access_logs (read only) ===================
+CREATE POLICY "mcp_access_logs_select" ON mcp_access_logs
+  FOR SELECT USING (
+    mcp_server_id IN (SELECT id FROM mcp_servers WHERE org_id IN (SELECT public.user_org_ids()))
+  );
+

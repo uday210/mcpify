@@ -1,0 +1,5 @@
+{
+	"project_id": "your_project_id",
+	"supabase_dir": "supabase",
+	"seed_dir": "supabase/seeds"
+}

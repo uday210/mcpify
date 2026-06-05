@@ -1,0 +1,17 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm run build"
+
+[deploy]
+# Next.js reads $PORT automatically; Railway injects it.
+startCommand = "npm run start"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Required environment variables (set these in the Railway service Variables tab):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+#   JWT_SECRET                     (openssl rand -hex 32)
+#   CREDENTIALS_ENCRYPTION_KEY     (openssl rand -hex 32)
+#   NEXT_PUBLIC_APP_URL            (your public Railway URL, e.g. https://mcpify.up.railway.app)
