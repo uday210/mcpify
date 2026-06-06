@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
@@ -69,6 +69,9 @@ export default function NewConnectionPage() {
 	const [oauthTokenUrl, setOauthTokenUrl] = useState('');
 	const [oauthScopes, setOauthScopes] = useState('');
 	const [accountId, setAccountId] = useState('');
+	// test-before-save
+	const [testing, setTesting] = useState(false);
+	const [testResult, setTestResult] = useState<{ ok: boolean; skipped?: boolean; message: string } | null>(null);
 	// openapi
 	const [openapiUrl, setOpenapiUrl] = useState('');
 	const [openapiSpec, setOpenapiSpec] = useState('');
@@ -147,11 +150,7 @@ export default function NewConnectionPage() {
 				return { name: t.name, http_method: t.http_method, path_template: t.path_template, param_map };
 			});
 
-	const submit = async () => {
-		setError(null);
-		if (!name) return setError('Please give this connection a name.');
-		setSubmitting(true);
-
+	const buildBody = () => {
 		const credentials: any = {};
 		if (authType === 'api_key' || authType === 'bearer' || authType === 'custom' || authType === 'token_path') {
 			if (keyValue) credentials.value = keyValue;
@@ -204,6 +203,34 @@ export default function NewConnectionPage() {
 			body.baseUrl = baseUrl;
 			body.tools = buildManualTools();
 		}
+		return body;
+	};
+
+	const testConnection = async () => {
+		setError(null);
+		setTestResult(null);
+		setTesting(true);
+		try {
+			const r = await fetch('/api/connections/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildBody()),
+			});
+			const d = await r.json();
+			setTestResult({ ok: !!d.ok, skipped: !!d.skipped, message: d.message || (d.ok ? 'Reachable' : 'Failed') });
+		} catch (e: any) {
+			setTestResult({ ok: false, message: e?.message || 'Test failed' });
+		} finally {
+			setTesting(false);
+		}
+	};
+
+	const submit = async () => {
+		setError(null);
+		if (!name) return setError('Please give this connection a name.');
+		setSubmitting(true);
+
+		const body = buildBody();
 
 		try {
 			const r = await fetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -213,8 +240,13 @@ export default function NewConnectionPage() {
 				setSubmitting(false);
 				return;
 			}
-			if (authType === 'oauth') window.location.href = `/api/oauth/${d.id}/authorize`;
-			else router.push('/dashboard/connections');
+			if (authType === 'oauth') {
+				window.location.href = `/api/oauth/${d.id}/authorize`;
+			} else {
+				// Verify in the background so the health badge is accurate on the list.
+				if (d.id) await fetch(`/api/connections/${d.id}/verify`, { method: 'POST' }).catch(() => {});
+				router.push('/dashboard/connections');
+			}
 		} catch (e: any) {
 			setError(e?.message || 'Something went wrong');
 			setSubmitting(false);
@@ -660,13 +692,50 @@ export default function NewConnectionPage() {
 								</div>
 							)}
 
-							<button
-								onClick={submit}
-								disabled={submitting}
-								className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lift transition disabled:opacity-50"
-							>
-								{submitting ? 'Creating…' : authType === 'oauth' ? 'Save & Authorize' : 'Create Connection'}
-							</button>
+							{testResult && (
+								<div
+									className={`flex items-start gap-2 text-sm rounded-xl px-3 py-2.5 border ${
+										testResult.skipped
+											? 'bg-slate-50 border-slate-200 text-slate-600'
+											: testResult.ok
+												? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+												: 'bg-red-50 border-red-200 text-red-700'
+									}`}
+								>
+									{testResult.skipped ? (
+										<Info className="w-4 h-4 shrink-0 mt-0.5" />
+									) : testResult.ok ? (
+										<CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+									) : (
+										<XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+									)}
+									<span>{testResult.message}</span>
+								</div>
+							)}
+
+							<div className="flex gap-3">
+								{authType !== 'oauth' && (
+									<button
+										onClick={testConnection}
+										disabled={testing || submitting}
+										className="flex-1 py-3 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+									>
+										{testing ? (
+											<RefreshCw className="w-4 h-4 animate-spin" />
+										) : (
+											<Plug className="w-4 h-4" />
+										)}
+										{testing ? 'Testing…' : 'Test'}
+									</button>
+								)}
+								<button
+									onClick={submit}
+									disabled={submitting}
+									className="flex-[2] py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lift transition disabled:opacity-50"
+								>
+									{submitting ? 'Creating…' : authType === 'oauth' ? 'Save & Authorize' : 'Create Connection'}
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
