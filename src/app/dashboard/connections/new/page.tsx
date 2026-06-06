@@ -6,7 +6,7 @@ import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink,
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
-type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc';
+type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc' | 'oauth2_account' | 'token_path';
 
 interface CatalogApp {
 	slug: string;
@@ -68,6 +68,7 @@ export default function NewConnectionPage() {
 	const [oauthAuthorizeUrl, setOauthAuthorizeUrl] = useState('');
 	const [oauthTokenUrl, setOauthTokenUrl] = useState('');
 	const [oauthScopes, setOauthScopes] = useState('');
+	const [accountId, setAccountId] = useState('');
 	// openapi
 	const [openapiUrl, setOpenapiUrl] = useState('');
 	const [openapiSpec, setOpenapiSpec] = useState('');
@@ -152,7 +153,7 @@ export default function NewConnectionPage() {
 		setSubmitting(true);
 
 		const credentials: any = {};
-		if (authType === 'api_key' || authType === 'bearer' || authType === 'custom') {
+		if (authType === 'api_key' || authType === 'bearer' || authType === 'custom' || authType === 'token_path') {
 			if (keyValue) credentials.value = keyValue;
 		} else if (authType === 'basic') {
 			credentials.username = basicUser;
@@ -178,6 +179,14 @@ export default function NewConnectionPage() {
 				client_id: oauthClientId,
 				client_secret: oauthClientSecret,
 				...(connectorType !== 'catalog' ? { token_url: oauthTokenUrl, scope: oauthScopes } : {}),
+			};
+		}
+		if (authType === 'oauth2_account') {
+			config.oauth = {
+				client_id: oauthClientId,
+				client_secret: oauthClientSecret,
+				account_id: accountId,
+				...(connectorType !== 'catalog' ? { token_url: oauthTokenUrl } : {}),
 			};
 		}
 
@@ -507,13 +516,23 @@ export default function NewConnectionPage() {
 										<option value="custom">Custom Header</option>
 										<option value="oauth">OAuth 2.0 (Authorization Code)</option>
 										<option value="oauth2_cc">OAuth 2.0 (Client Credentials)</option>
+										<option value="oauth2_account">OAuth 2.0 (Account Credentials)</option>
+										<option value="token_path">Token in URL path</option>
 									</select>
 								</div>
 							)}
 
 							{/* credentials */}
-							{authType !== 'none' && authType !== 'oauth' && authType !== 'oauth2_cc' && (
+							{authType !== 'none' && authType !== 'oauth' && authType !== 'oauth2_cc' && authType !== 'oauth2_account' && (
 								<div className="text-sm font-semibold text-slate-700">Credentials</div>
+							)}
+
+							{authType === 'token_path' && (
+								<div>
+									<label className={labelCls}>Bot token</label>
+									<input className={input} type="password" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="123456:ABC-DEF…" />
+									<p className="text-xs text-slate-500 mt-1">From @BotFather. mcpify calls https://api.telegram.org/bot&lt;token&gt;/…</p>
+								</div>
 							)}
 
 							{authType === 'api_key' &&
@@ -613,6 +632,31 @@ export default function NewConnectionPage() {
 											<code className="block mt-1 bg-slate-100 px-2 py-1.5 rounded break-all text-slate-700">{redirectUri}</code>
 										</div>
 									)}
+								</div>
+							)}
+							{authType === 'oauth2_account' && (
+								<div className="space-y-3">
+									<div className="grid grid-cols-2 gap-3">
+										<div>
+											<label className={labelCls}>Client ID</label>
+											<input className={input} value={oauthClientId} onChange={(e) => setOauthClientId(e.target.value)} />
+										</div>
+										<div>
+											<label className={labelCls}>Client Secret</label>
+											<input className={input} type="password" value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} />
+										</div>
+									</div>
+									<div>
+										<label className={labelCls}>Account ID</label>
+										<input className={input} value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Zoom Account ID" />
+									</div>
+									{connectorType !== 'catalog' && (
+										<div>
+											<label className={labelCls}>Token URL</label>
+											<input className={input} value={oauthTokenUrl} onChange={(e) => setOauthTokenUrl(e.target.value)} />
+										</div>
+									)}
+									<p className="text-xs text-slate-500">Create a Server-to-Server OAuth app in the provider’s marketplace to get these values.</p>
 								</div>
 							)}
 

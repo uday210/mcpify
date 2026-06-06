@@ -34,7 +34,12 @@
       "Bash(git fetch *)",
       "Bash(git rev-list *)",
       "Bash(perl -0pi -e 's/98\\\\+ built-in apps — or import any of 2,500\\\\+ OpenAPI specs/100+ built-in apps — or import any of 2,500+ OpenAPI specs/' src/app/page.tsx)",
-      "Bash(perl -0pi -e 's/98\\\\+ built-in apps, plus 2,500\\\\+ via OpenAPI/100+ built-in apps, plus 2,500+ via OpenAPI/' src/components/BrandPanel.tsx)"
+      "Bash(perl -0pi -e 's/98\\\\+ built-in apps, plus 2,500\\\\+ via OpenAPI/100+ built-in apps, plus 2,500+ via OpenAPI/' src/components/BrandPanel.tsx)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://api.telegram.org/bot123/getMe)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://zoom.us/oauth/token)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://api.zoom.us/v2/users/me)",
+      "Bash(node scripts/seed-telegram-zoom.mjs)",
+      "Bash(echo \"pushed: $?\")"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

@@ -91,6 +91,13 @@ export async function executeTool(
 			for (const [k, v] of Object.entries(staticHeaders)) headers[k] = String(v);
 		}
 
+		// --- Token-in-path auth (e.g. Telegram /bot<token>/...).
+		if (connection.auth_type === 'token_path') {
+			const tmpl = (connection.config || {}).token_path_template || '/bot{token}';
+			const tok = connection.credentials ? safeDecrypt(connection.credentials).value : '';
+			path = tmpl.replace('{token}', String(tok)) + (path.startsWith('/') ? path : '/' + path);
+		}
+
 		// --- Inject auth.
 		await applyAuth(connection, headers, query);
 
@@ -217,7 +224,45 @@ async function applyAuth(
 			if (token) headers['Authorization'] = `Bearer ${token}`;
 			break;
 		}
+		case 'oauth2_account': {
+			const token = await getAccountCredentialsToken(connection);
+			if (token) headers['Authorization'] = `Bearer ${token}`;
+			break;
+		}
+		// token_path is handled when building the URL path, not via headers.
 	}
+}
+
+/**
+ * Zoom-style Server-to-Server OAuth: account_credentials grant with HTTP Basic
+ * (client_id:client_secret) and an account_id. Cached like client-credentials.
+ */
+async function getAccountCredentialsToken(connection: any): Promise<string | null> {
+	const cached = ccTokenCache.get(connection.id);
+	if (cached && cached.exp - Date.now() > 60_000) return cached.token;
+	const oauth = (connection.config || {}).oauth || {};
+	if (!oauth.token_url || !oauth.client_id || !oauth.account_id) {
+		throw new Error('Account-credentials OAuth not configured (token URL, client ID, account ID).');
+	}
+	const clientSecret = oauth.client_secret ? safeDecrypt(oauth.client_secret).value : '';
+	const basic = Buffer.from(`${oauth.client_id}:${clientSecret}`).toString('base64');
+	const params = new URLSearchParams({ grant_type: 'account_credentials', account_id: oauth.account_id });
+	const resp = await fetch(oauth.token_url, {
+		method: 'POST',
+		headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+		body: params.toString(),
+	});
+	const text = await resp.text();
+	if (!resp.ok) throw new Error(`OAuth token request failed (HTTP ${resp.status}). Check client ID/secret/account ID. ${text.slice(0, 160)}`);
+	let tok: any = {};
+	try {
+		tok = JSON.parse(text);
+	} catch {
+		/* ignore */
+	}
+	if (!tok.access_token) throw new Error('OAuth token response had no access_token.');
+	ccTokenCache.set(connection.id, { token: tok.access_token, exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000 });
+	return tok.access_token;
 }
 
 // In-memory client-credentials token cache (per connection). Single-instance.

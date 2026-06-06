@@ -52,6 +52,7 @@ export async function buildConnectionInsert(
 		if (def.config?.api_key_in) config.api_key_in = def.config.api_key_in;
 		if (def.config?.api_key_name) config.api_key_name = def.config.api_key_name;
 		if (def.config?.static_headers) config.static_headers = def.config.static_headers;
+		if (def.config?.token_path_template) config.token_path_template = def.config.token_path_template;
 	} else if (connectorType === 'openapi') {
 		let specText: string = body.openapiSpec || '';
 		if (!specText && body.openapiUrl) {
@@ -117,6 +118,20 @@ export async function buildConnectionInsert(
 			...(o.client_id ? { client_id: o.client_id } : {}),
 			...(o.client_secret ? { client_secret: encryptCredentials({ value: o.client_secret }) } : {}),
 		};
+	} else if (authType === 'oauth2_account') {
+		// Zoom-style account_credentials grant.
+		const o = body.config?.oauth || {};
+		config.oauth = {
+			...(config.oauth || {}),
+			...(o.token_url ? { token_url: o.token_url } : {}),
+			...(o.account_id ? { account_id: o.account_id } : {}),
+			...(o.client_id ? { client_id: o.client_id } : {}),
+			...(o.client_secret ? { client_secret: encryptCredentials({ value: o.client_secret }) } : {}),
+		};
+	} else if (authType === 'token_path') {
+		// Token embedded in the URL path (e.g. Telegram /bot<token>).
+		if (credsInput.value) credentials = encryptCredentials({ value: credsInput.value });
+		if (!config.token_path_template) config.token_path_template = '/bot{token}';
 	}
 
 	const insert = {

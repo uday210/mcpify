@@ -1379,6 +1379,52 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_campaigns', 'List campaigns.', 'GET', '/campaigns', []),
 		],
 	},
+	telegram: {
+		// Token-in-path: the proxy prepends /bot<token> from token_path_template.
+		baseUrl: 'https://api.telegram.org',
+		tools: [
+			tool('get_me', 'Get info about the bot.', 'GET', '/getMe', []),
+			tool('send_message', 'Send a text message to a chat.', 'POST', '/sendMessage', [
+				{ name: 'chat_id', in: 'query', required: true, description: 'Target chat ID or @channelusername' },
+				{ name: 'text', in: 'query', required: true, description: 'Message text' },
+				{ name: 'parse_mode', in: 'query', description: 'Markdown or HTML' },
+			]),
+			tool('send_photo', 'Send a photo by URL.', 'POST', '/sendPhoto', [
+				{ name: 'chat_id', in: 'query', required: true },
+				{ name: 'photo', in: 'query', required: true, description: 'Photo URL or file_id' },
+				{ name: 'caption', in: 'query' },
+			]),
+			tool('get_updates', 'Get incoming updates (long polling).', 'GET', '/getUpdates', [
+				{ name: 'offset', in: 'query' },
+				{ name: 'limit', in: 'query' },
+			]),
+			tool('get_chat', 'Get info about a chat.', 'GET', '/getChat', [
+				{ name: 'chat_id', in: 'query', required: true },
+			]),
+		],
+	},
+	zoom: {
+		// Server-to-Server OAuth (account_credentials grant).
+		baseUrl: 'https://api.zoom.us/v2',
+		tools: [
+			tool('get_me', 'Get the current user.', 'GET', '/users/me', []),
+			tool('list_users', 'List users on the account.', 'GET', '/users', [
+				{ name: 'status', in: 'query', description: 'active | inactive | pending' },
+				{ name: 'page_size', in: 'query' },
+			]),
+			tool('list_meetings', 'List a user’s meetings.', 'GET', '/users/{userId}/meetings', [
+				{ name: 'userId', in: 'path', required: true, description: 'User ID or "me"' },
+				{ name: 'type', in: 'query', description: 'scheduled | live | upcoming' },
+			]),
+			tool('create_meeting', 'Create a meeting for a user.', 'POST', '/users/{userId}/meetings', [
+				{ name: 'userId', in: 'path', required: true, description: 'User ID or "me"' },
+				{ name: 'body', in: 'body', required: true, description: 'Meeting object, e.g. {"topic":"Standup","type":2,"start_time":"2026-06-10T15:00:00Z","duration":30}' },
+			]),
+			tool('get_meeting', 'Get a meeting by ID.', 'GET', '/meetings/{meetingId}', [
+				{ name: 'meetingId', in: 'path', required: true },
+			]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
