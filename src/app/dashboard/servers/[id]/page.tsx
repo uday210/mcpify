@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge } from 'lucide-react';
+import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge, Boxes } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
+import AppIcon from '@/components/AppIcon';
+import { faviconFor } from '@/lib/favicon';
 import ServerConnect from '@/components/ServerConnect';
 import ToolTester from '@/components/ToolTester';
 import { toast } from '@/components/Toaster';
@@ -114,23 +116,43 @@ export default function ServerDetailPage() {
 				<ArrowLeft className="w-4 h-4" /> Back to servers
 			</button>
 
-			<div className="flex items-start justify-between mb-6">
-				<div>
-					<h1 className="text-3xl font-bold text-slate-900">{server.name}</h1>
-					<p className="text-slate-500 mt-1">
-						<span className="uppercase">{server.transport_type}</span> ·{' '}
-						{server.access_count || 0} calls · {server.error_count || 0} errors
-					</p>
+			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5 mb-6 flex items-center gap-4">
+				{server.mode === 'aggregate' ? (
+					<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lift">
+						<Boxes className="w-7 h-7 text-white" />
+					</div>
+				) : (
+					<AppIcon src={faviconFor(server.app_connections?.base_url)} name={server.name} size={56} rounded="rounded-2xl" />
+				)}
+				<div className="min-w-0 flex-1">
+					<div className="flex items-center gap-2 flex-wrap">
+						<h1 className="text-2xl font-bold tracking-tight text-slate-900 truncate">{server.name}</h1>
+						<span
+							className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+								server.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+							}`}
+						>
+							<span className={`w-1.5 h-1.5 rounded-full ${server.is_active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+							{server.is_active ? 'Active' : 'Off'}
+						</span>
+					</div>
+					<div className="flex items-center gap-2 mt-1.5 text-xs">
+						<span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">{server.transport_type}</span>
+						{server.mode === 'aggregate' && <span className="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700">aggregate</span>}
+						<span className="text-slate-500">{server.access_count || 0} calls</span>
+						<span className="text-slate-400">·</span>
+						<span className="text-slate-500">{server.error_count || 0} errors</span>
+					</div>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 shrink-0">
 					<button
 						onClick={() => patch({ is_active: !server.is_active })}
-						className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
+						className="flex items-center gap-1.5 px-3.5 py-2 text-sm border border-slate-300 rounded-xl hover:bg-slate-50 transition"
 					>
 						<Power className="w-4 h-4" />
-						{server.is_active ? 'Disable' : 'Enable'}
+						<span className="hidden sm:inline">{server.is_active ? 'Disable' : 'Enable'}</span>
 					</button>
-					<button onClick={remove} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+					<button onClick={remove} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition">
 						<Trash2 className="w-4 h-4" />
 					</button>
 				</div>

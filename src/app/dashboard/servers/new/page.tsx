@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Check, Server } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import AppIcon from '@/components/AppIcon';
 
@@ -165,8 +165,15 @@ export default function NewServerPage() {
 			>
 				<ArrowLeft className="w-4 h-4" /> Back
 			</button>
-			<h1 className="text-3xl font-bold text-slate-900 mb-1">Create MCP Server</h1>
-			<p className="text-slate-500 mb-6">Expose a connection&apos;s tools over MCP.</p>
+			<div className="flex items-center gap-3 mb-6">
+				<div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lift">
+					<Server className="w-5 h-5 text-white" />
+				</div>
+				<div>
+					<h1 className="text-2xl font-bold tracking-tight text-slate-900">Create MCP Server</h1>
+					<p className="text-slate-500 text-sm">Expose a connection&apos;s tools over MCP.</p>
+				</div>
+			</div>
 
 			{error && (
 				<div className="mb-5 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
@@ -330,7 +337,7 @@ export default function NewServerPage() {
 					<button
 						onClick={submit}
 						disabled={submitting}
-						className="w-full py-2.5 bg-cyan-600 text-white rounded-lg font-medium hover:bg-cyan-700 transition disabled:opacity-50"
+						className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lift transition disabled:opacity-50"
 					>
 						{submitting ? 'Creating…' : 'Create Server'}
 					</button>
