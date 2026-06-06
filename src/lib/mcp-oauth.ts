@@ -18,5 +18,9 @@ export function verifyPkce(codeChallenge: string | undefined, codeVerifier: stri
 }
 
 export function appBaseUrl(reqUrl: string): string {
-	return process.env.NEXT_PUBLIC_APP_URL || new URL(reqUrl).origin;
+	let u = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+	if (!u) u = new URL(reqUrl).origin;
+	u = u.replace(/\/+$/, ''); // strip trailing slash(es)
+	if (!/^https?:\/\//i.test(u)) u = 'https://' + u; // tolerate a missing scheme
+	return u;
 }

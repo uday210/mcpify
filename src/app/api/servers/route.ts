@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey } from '@/lib/encryption';
 import { getOrgId, slugify } from '@/lib/api-helpers';
 import { faviconFor } from '@/lib/favicon';
+import { appBaseUrl } from '@/lib/mcp-oauth';
 
 /** GET /api/servers — list the current user's MCP servers. */
 export async function GET() {
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
 		}));
 	}
 
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+	const appUrl = appBaseUrl(request.url);
 	const slug = await uniqueSlug(supabase, body.slug || name);
 	const apiKey = generateApiKey();
 	const oauthClientId = authMode === 'oauth' ? `mcpify_${generateApiKey().slice(0, 24)}` : null;

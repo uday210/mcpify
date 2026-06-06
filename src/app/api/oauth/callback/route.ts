@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyState } from '@/lib/oauth';
 import { encryptCredentials, decryptCredentials } from '@/lib/encryption';
+import { appBaseUrl } from '@/lib/mcp-oauth';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 	const clientSecret = oauth.client_secret
 		? safeDecryptValue(oauth.client_secret)
 		: undefined;
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+	const appUrl = appBaseUrl(request.url);
 
 	const tokenParams = new URLSearchParams({
 		grant_type: 'authorization_code',

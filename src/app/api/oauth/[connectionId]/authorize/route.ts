@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { signState } from '@/lib/oauth';
+import { appBaseUrl } from '@/lib/mcp-oauth';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +39,7 @@ export async function GET(
 		);
 	}
 
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+	const appUrl = appBaseUrl(request.url);
 	const redirectUri = `${appUrl}/api/oauth/callback`;
 	const state = signState({ connectionId });
 
