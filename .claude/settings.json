@@ -41,7 +41,8 @@
       "Bash(node scripts/seed-telegram-zoom.mjs)",
       "Bash(echo \"pushed: $?\")",
       "Bash(sed -n '1,60p' src/app/page.tsx)",
-      "Bash(sed -n '1,40p' src/app/dashboard/page.tsx)"
+      "Bash(sed -n '1,40p' src/app/dashboard/page.tsx)",
+      "Bash(npx vitest *)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

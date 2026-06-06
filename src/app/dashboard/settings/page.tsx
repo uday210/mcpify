@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send } from 'lucide-react';
+import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send, Building2, Download, Trash2, Plug, Server, Activity } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/Toaster';
 import { getPrefs, setPrefs, type Preferences } from '@/lib/preferences';
 
-type Tab = 'account' | 'security' | 'preferences' | 'notifications';
+type Tab = 'account' | 'organization' | 'security' | 'preferences' | 'notifications';
 
 const input =
 	'w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none';
@@ -17,6 +17,7 @@ export default function SettingsPage() {
 
 	const tabs: { id: Tab; label: string; icon: any }[] = [
 		{ id: 'account', label: 'Account', icon: User },
+		{ id: 'organization', label: 'Organization', icon: Building2 },
 		{ id: 'security', label: 'Security & keys', icon: ShieldCheck },
 		{ id: 'notifications', label: 'Notifications', icon: Bell },
 		{ id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
@@ -48,6 +49,7 @@ export default function SettingsPage() {
 
 				<div className="flex-1 min-w-0 max-w-2xl">
 					{tab === 'account' && <AccountTab />}
+					{tab === 'organization' && <OrganizationTab />}
 					{tab === 'security' && <SecurityTab />}
 					{tab === 'notifications' && <NotificationsTab />}
 					{tab === 'preferences' && <PreferencesTab />}
@@ -72,12 +74,15 @@ function AccountTab() {
 	const [profile, setProfile] = useState<any>(null);
 	const [fullName, setFullName] = useState('');
 	const [company, setCompany] = useState('');
-	const [orgName, setOrgName] = useState('');
 	const [saving, setSaving] = useState(false);
 
 	const [pw, setPw] = useState('');
 	const [pw2, setPw2] = useState('');
 	const [pwSaving, setPwSaving] = useState(false);
+
+	const [exporting, setExporting] = useState(false);
+	const [confirmText, setConfirmText] = useState('');
+	const [deleting, setDeleting] = useState(false);
 
 	useEffect(() => {
 		fetch('/api/profile')
@@ -86,7 +91,6 @@ function AccountTab() {
 				setProfile(d);
 				setFullName(d.full_name || '');
 				setCompany(d.company_name || '');
-				setOrgName(d.org?.name || '');
 			})
 			.catch(() => {});
 	}, []);
@@ -96,11 +100,10 @@ function AccountTab() {
 		const r = await fetch('/api/profile', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ full_name: fullName, company_name: company, org_name: orgName, org_id: profile?.org?.id }),
+			body: JSON.stringify({ full_name: fullName, company_name: company }),
 		});
 		setSaving(false);
-		if (r.ok) toast('Profile saved', 'success');
-		else toast('Could not save profile', 'error');
+		toast(r.ok ? 'Profile saved' : 'Could not save profile', r.ok ? 'success' : 'error');
 	};
 
 	const changePassword = async () => {
@@ -120,6 +123,43 @@ function AccountTab() {
 		window.location.href = '/';
 	};
 
+	const exportData = async () => {
+		setExporting(true);
+		try {
+			const [conns, servers] = await Promise.all([
+				fetch('/api/connections').then((r) => r.json()),
+				fetch('/api/servers').then((r) => r.json()),
+			]);
+			const blob = new Blob(
+				[JSON.stringify({ exported_at: new Date().toISOString(), email: profile?.email, connections: conns, servers }, null, 2)],
+				{ type: 'application/json' }
+			);
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'mcpify-export.json';
+			a.click();
+			URL.revokeObjectURL(url);
+			toast('Export downloaded', 'success');
+		} finally {
+			setExporting(false);
+		}
+	};
+
+	const deleteAccount = async () => {
+		if (confirmText !== profile?.email) return toast('Type your email to confirm', 'error');
+		setDeleting(true);
+		const r = await fetch('/api/account', { method: 'DELETE' });
+		if (!r.ok) {
+			setDeleting(false);
+			return toast('Could not delete account', 'error');
+		}
+		await supabase.auth.signOut().catch(() => {});
+		window.location.href = '/';
+	};
+
+	const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—';
+
 	return (
 		<>
 			<Section title="Profile" desc="How you appear in mcpify.">
@@ -138,17 +178,16 @@ function AccountTab() {
 							<input className={input} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Inc." />
 						</div>
 					</div>
-					<div>
-						<label className={label}>Organization name</label>
-						<input className={input} value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My workspace" />
+					<div className="flex items-center justify-between">
+						<button
+							onClick={saveProfile}
+							disabled={saving}
+							className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lift transition disabled:opacity-50"
+						>
+							{saving ? 'Saving…' : 'Save changes'}
+						</button>
+						<span className="text-xs text-slate-400">Member since {memberSince}</span>
 					</div>
-					<button
-						onClick={saveProfile}
-						disabled={saving}
-						className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lift transition disabled:opacity-50"
-					>
-						{saving ? 'Saving…' : 'Save changes'}
-					</button>
 				</div>
 			</Section>
 
@@ -177,12 +216,129 @@ function AccountTab() {
 			<Section title="Sessions">
 				<div className="flex items-center justify-between">
 					<p className="text-sm text-slate-500">Sign out of mcpify on every device.</p>
-					<button onClick={signOutEverywhere} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition">
+					<button onClick={signOutEverywhere} className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
 						Sign out everywhere
 					</button>
 				</div>
 			</Section>
+
+			<Section title="Export your data" desc="Download your connections and servers as JSON (secrets excluded).">
+				<button
+					onClick={exportData}
+					disabled={exporting}
+					className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50"
+				>
+					<Download className="w-4 h-4" />
+					{exporting ? 'Preparing…' : 'Export JSON'}
+				</button>
+			</Section>
+
+			<div className="bg-white rounded-2xl border border-red-200 shadow-card p-6">
+				<h3 className="font-semibold text-red-700">Danger zone</h3>
+				<p className="text-sm text-slate-500 mt-0.5 mb-4">
+					Permanently delete your account, organization, connections and servers. This cannot be undone.
+				</p>
+				<div className="space-y-3">
+					<div>
+						<label className={label}>Type <span className="font-mono text-slate-700">{profile?.email}</span> to confirm</label>
+						<input className={input} value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={profile?.email || 'your email'} />
+					</div>
+					<button
+						onClick={deleteAccount}
+						disabled={deleting || confirmText !== profile?.email}
+						className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition disabled:opacity-40"
+					>
+						<Trash2 className="w-4 h-4" />
+						{deleting ? 'Deleting…' : 'Delete account'}
+					</button>
+				</div>
+			</div>
 		</>
+	);
+}
+
+function OrganizationTab() {
+	const [profile, setProfile] = useState<any>(null);
+	const [orgName, setOrgName] = useState('');
+	const [saving, setSaving] = useState(false);
+	const [usage, setUsage] = useState<{ connections: number; servers: number; calls: number } | null>(null);
+
+	useEffect(() => {
+		fetch('/api/profile')
+			.then((r) => r.json())
+			.then((d) => {
+				setProfile(d);
+				setOrgName(d.org?.name || '');
+			})
+			.catch(() => {});
+		Promise.all([
+			fetch('/api/connections').then((r) => r.json()).catch(() => []),
+			fetch('/api/servers').then((r) => r.json()).catch(() => []),
+		]).then(([c, s]) => {
+			const conns = Array.isArray(c) ? c : [];
+			const servers = Array.isArray(s) ? s : [];
+			setUsage({
+				connections: conns.length,
+				servers: servers.length,
+				calls: servers.reduce((n: number, x: any) => n + (x.access_count || 0), 0),
+			});
+		});
+	}, []);
+
+	const save = async () => {
+		setSaving(true);
+		const r = await fetch('/api/profile', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ org_name: orgName, org_id: profile?.org?.id }),
+		});
+		setSaving(false);
+		toast(r.ok ? 'Organization saved' : 'Could not save', r.ok ? 'success' : 'error');
+	};
+
+	return (
+		<>
+			<Section title="Organization" desc="Your workspace name and identifier.">
+				<div className="space-y-4">
+					<div>
+						<label className={label}>Name</label>
+						<input className={input} value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My workspace" />
+					</div>
+					<div>
+						<label className={label}>Slug</label>
+						<input className={`${input} bg-slate-50 text-slate-500 font-mono`} value={profile?.org?.slug || ''} disabled />
+					</div>
+					<button onClick={save} disabled={saving} className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lift transition disabled:opacity-50">
+						{saving ? 'Saving…' : 'Save'}
+					</button>
+				</div>
+			</Section>
+
+			<Section title="Usage" desc="Current footprint of this organization.">
+				<div className="grid grid-cols-3 gap-3">
+					<UsageStat icon={Plug} label="Connections" value={usage?.connections ?? '—'} />
+					<UsageStat icon={Server} label="Servers" value={usage?.servers ?? '—'} />
+					<UsageStat icon={Activity} label="Total calls" value={usage?.calls ?? '—'} />
+				</div>
+				<p className="text-xs text-slate-400 mt-3">You’re on the <span className="font-medium text-slate-600">Free</span> plan — generous limits, no card required.</p>
+			</Section>
+
+			<Section title="Members" desc="Invite teammates to share this workspace.">
+				<div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
+					<p className="text-sm text-slate-500">Team invites are coming soon.</p>
+					<button disabled className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-400 cursor-not-allowed">Invite</button>
+				</div>
+			</Section>
+		</>
+	);
+}
+
+function UsageStat({ icon: Icon, label, value }: { icon: any; label: string; value: any }) {
+	return (
+		<div className="rounded-xl border border-slate-100 p-3">
+			<div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1"><Icon className="w-3.5 h-3.5" />{label}</div>
+			<div className="text-xl font-bold text-slate-900">{value}</div>
+		</div>
 	);
 }
 
