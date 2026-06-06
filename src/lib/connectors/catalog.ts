@@ -1174,6 +1174,92 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_sites', 'List your sites.', 'GET', '/me/sites', []),
 		],
 	},
+	// --- Email / CRM / infra / monitoring ---
+	mailjet: {
+		baseUrl: 'https://api.mailjet.com/v3',
+		tools: [
+			tool('list_contacts', 'List contacts.', 'GET', '/REST/contact', [{ name: 'Limit', in: 'query', type: 'integer' }]),
+			tool('list_campaigns', 'List campaigns.', 'GET', '/REST/campaign', [{ name: 'Limit', in: 'query', type: 'integer' }]),
+		],
+	},
+	sparkpost: {
+		baseUrl: 'https://api.sparkpost.com/api/v1',
+		tools: [
+			tool('get_account', 'Get account info.', 'GET', '/account', []),
+			tool('list_templates', 'List email templates.', 'GET', '/templates', []),
+		],
+	},
+	loops: {
+		baseUrl: 'https://app.loops.so/api/v1',
+		tools: [
+			tool('find_contact', 'Find a contact by email.', 'GET', '/contacts/find', [{ name: 'email', in: 'query', required: true }]),
+			tool('list_mailing_lists', 'List mailing lists.', 'GET', '/lists', []),
+		],
+	},
+	bugsnag: {
+		baseUrl: 'https://api.bugsnag.com',
+		tools: [
+			tool('list_organizations', 'List your organizations.', 'GET', '/user/organizations', []),
+			tool('list_projects', 'List an org’s projects.', 'GET', '/organizations/{org_id}/projects', [{ name: 'org_id', in: 'path', required: true }]),
+		],
+	},
+	betterstack: {
+		baseUrl: 'https://uptime.betterstack.com/api/v2',
+		tools: [
+			tool('list_monitors', 'List monitors.', 'GET', '/monitors', []),
+			tool('list_incidents', 'List incidents.', 'GET', '/incidents', []),
+		],
+	},
+	checkly: {
+		baseUrl: 'https://api.checklyhq.com/v1',
+		tools: [
+			tool('list_checks', 'List checks.', 'GET', '/checks', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_check_groups', 'List check groups.', 'GET', '/check-groups', []),
+		],
+	},
+	linode: {
+		baseUrl: 'https://api.linode.com/v4',
+		tools: [
+			tool('list_instances', 'List Linodes.', 'GET', '/linode/instances', []),
+			tool('list_domains', 'List domains.', 'GET', '/domains', []),
+		],
+	},
+	vultr: {
+		baseUrl: 'https://api.vultr.com/v2',
+		tools: [
+			tool('list_instances', 'List instances.', 'GET', '/instances', []),
+			tool('list_regions', 'List regions.', 'GET', '/regions', []),
+		],
+	},
+	hetzner: {
+		baseUrl: 'https://api.hetzner.cloud/v1',
+		tools: [
+			tool('list_servers', 'List servers.', 'GET', '/servers', []),
+			tool('list_images', 'List images.', 'GET', '/images', []),
+		],
+	},
+	close: {
+		baseUrl: 'https://api.close.com/api/v1',
+		tools: [
+			tool('get_me', 'Get the current user.', 'GET', '/me/', []),
+			tool('list_leads', 'List leads.', 'GET', '/lead/', [{ name: 'query', in: 'query' }]),
+			tool('list_opportunities', 'List opportunities.', 'GET', '/opportunity/', []),
+		],
+	},
+	attio: {
+		baseUrl: 'https://api.attio.com/v2',
+		tools: [
+			tool('list_objects', 'List objects.', 'GET', '/objects', []),
+			tool('list_members', 'List workspace members.', 'GET', '/workspace_members', []),
+		],
+	},
+	pingdom: {
+		baseUrl: 'https://api.pingdom.com/api/3.1',
+		tools: [
+			tool('list_checks', 'List uptime checks.', 'GET', '/checks', []),
+			tool('get_check', 'Get a check by id.', 'GET', '/checks/{checkid}', [{ name: 'checkid', in: 'path', required: true }]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
