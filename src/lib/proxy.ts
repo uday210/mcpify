@@ -336,16 +336,29 @@ async function getOAuthAccessToken(connection: any): Promise<string | null> {
 	if (!refresh || !oauth.token_url) return access; // nothing to refresh with
 
 	const clientSecret = oauth.client_secret ? safeDecrypt(oauth.client_secret).value : undefined;
+	const useBasic = oauth.token_auth === 'basic';
 	const params = new URLSearchParams({
 		grant_type: 'refresh_token',
 		refresh_token: refresh,
-		client_id: oauth.client_id || '',
 	});
-	if (clientSecret) params.set('client_secret', clientSecret);
+	if (!useBasic) {
+		params.set('client_id', oauth.client_id || '');
+		if (clientSecret) params.set('client_secret', clientSecret);
+	}
+
+	const refreshHeaders: Record<string, string> = {
+		'Content-Type': 'application/x-www-form-urlencoded',
+		Accept: 'application/json',
+		'User-Agent': ((connection.config || {}).static_headers || {})['User-Agent'] || 'mcpify/1.0',
+	};
+	if (useBasic) {
+		refreshHeaders['Authorization'] =
+			'Basic ' + Buffer.from(`${oauth.client_id || ''}:${clientSecret || ''}`).toString('base64');
+	}
 
 	const resp = await fetch(oauth.token_url, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+		headers: refreshHeaders,
 		body: params.toString(),
 	});
 	if (!resp.ok) return access;

@@ -49,22 +49,36 @@ export async function GET(request: NextRequest) {
 		? safeDecryptValue(oauth.client_secret)
 		: undefined;
 	const appUrl = appBaseUrl(request.url);
+	const useBasic = oauth.token_auth === 'basic';
 
 	const tokenParams = new URLSearchParams({
 		grant_type: 'authorization_code',
 		code,
-		client_id: oauth.client_id || '',
 		redirect_uri: `${appUrl}/api/oauth/callback`,
 	});
-	if (clientSecret) tokenParams.set('client_secret', clientSecret);
+	// With HTTP Basic, client credentials go in the header, not the body.
+	if (!useBasic) {
+		tokenParams.set('client_id', oauth.client_id || '');
+		if (clientSecret) tokenParams.set('client_secret', clientSecret);
+	}
+	// PKCE verifier (set during authorize).
+	if (oauth.pkce_verifier) tokenParams.set('code_verifier', oauth.pkce_verifier);
+
+	const tokenHeaders: Record<string, string> = {
+		'Content-Type': 'application/x-www-form-urlencoded',
+		Accept: 'application/json',
+		// Some providers (Reddit) reject token requests without a User-Agent.
+		'User-Agent': (connection.config?.static_headers || {})['User-Agent'] || 'mcpify/1.0',
+	};
+	if (useBasic) {
+		tokenHeaders['Authorization'] =
+			'Basic ' + Buffer.from(`${oauth.client_id || ''}:${clientSecret || ''}`).toString('base64');
+	}
 
 	try {
 		const resp = await fetch(oauth.token_url, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				Accept: 'application/json',
-			},
+			headers: tokenHeaders,
 			body: tokenParams.toString(),
 		});
 		const tokens = await resp.json();
@@ -93,6 +107,35 @@ export async function GET(request: NextRequest) {
 		if (tokens.instance_url) {
 			update.base_url = String(tokens.instance_url).replace(/\/$/, '');
 		}
+
+		// Clear the one-time PKCE verifier now that the exchange is done.
+		let nextConfig = connection.config || {};
+		if (oauth.pkce_verifier) {
+			const { pkce_verifier, ...restOauth } = oauth;
+			nextConfig = { ...nextConfig, oauth: restOauth };
+		}
+
+		// Xero (and similar multi-tenant APIs) require a tenant id header on every
+		// call — fetch it once and bake it into static_headers.
+		if (oauth.capture_tenant) {
+			try {
+				const cr = await fetch('https://api.xero.com/connections', {
+					headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: 'application/json' },
+				});
+				const conns = await cr.json();
+				const tenantId = Array.isArray(conns) && conns[0]?.tenantId;
+				if (tenantId) {
+					nextConfig = {
+						...nextConfig,
+						static_headers: { ...(nextConfig.static_headers || {}), 'Xero-Tenant-Id': tenantId },
+					};
+				}
+			} catch {
+				/* non-fatal: tenant can be set manually if this fails */
+			}
+		}
+
+		update.config = nextConfig;
 
 		await admin.from('app_connections').update(update).eq('id', connection.id);
 

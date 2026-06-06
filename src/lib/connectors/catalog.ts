@@ -1425,6 +1425,101 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 		],
 	},
+	twitter: {
+		baseUrl: 'https://api.twitter.com/2',
+		tools: [
+			tool('get_me', 'Get the authenticated user.', 'GET', '/users/me', [
+				{ name: 'user.fields', in: 'query', description: 'e.g. description,public_metrics' },
+			]),
+			tool('get_user_by_username', 'Look up a user by handle.', 'GET', '/users/by/username/{username}', [
+				{ name: 'username', in: 'path', required: true },
+			]),
+			tool('get_user_tweets', 'Recent tweets for a user ID.', 'GET', '/users/{id}/tweets', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'max_results', in: 'query' },
+			]),
+			tool('search_recent', 'Search tweets from the last 7 days.', 'GET', '/tweets/search/recent', [
+				{ name: 'query', in: 'query', required: true, description: 'e.g. from:nasa -is:retweet' },
+				{ name: 'max_results', in: 'query' },
+			]),
+			tool('post_tweet', 'Publish a tweet.', 'POST', '/tweets', [
+				{ name: 'body', in: 'body', required: true, description: 'e.g. {"text":"Hello from mcpify"}' },
+			]),
+		],
+	},
+	linkedin: {
+		baseUrl: 'https://api.linkedin.com/v2',
+		tools: [
+			tool('get_userinfo', 'OpenID profile of the authenticated member.', 'GET', '/userinfo', []),
+			tool('get_me', 'Lite profile of the authenticated member.', 'GET', '/me', []),
+		],
+	},
+	reddit: {
+		baseUrl: 'https://oauth.reddit.com',
+		tools: [
+			tool('get_me', 'Get the authenticated user.', 'GET', '/api/v1/me', []),
+			tool('my_subreddits', 'Subreddits you’re subscribed to.', 'GET', '/subreddits/mine/subscriber', [
+				{ name: 'limit', in: 'query' },
+			]),
+			tool('subreddit_hot', 'Hot posts in a subreddit.', 'GET', '/r/{subreddit}/hot', [
+				{ name: 'subreddit', in: 'path', required: true },
+				{ name: 'limit', in: 'query' },
+			]),
+			tool('search', 'Search posts.', 'GET', '/search', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'limit', in: 'query' },
+			]),
+		],
+	},
+	zoho_crm: {
+		baseUrl: 'https://www.zohoapis.com/crm/v3',
+		tools: [
+			tool('current_user', 'Get the current CRM user.', 'GET', '/users', [
+				{ name: 'type', in: 'query', description: 'CurrentUser' },
+			]),
+			tool('list_records', 'List records in a module.', 'GET', '/{module}', [
+				{ name: 'module', in: 'path', required: true, description: 'e.g. Leads, Contacts, Deals' },
+				{ name: 'per_page', in: 'query' },
+			]),
+			tool('get_record', 'Get a record by ID.', 'GET', '/{module}/{id}', [
+				{ name: 'module', in: 'path', required: true },
+				{ name: 'id', in: 'path', required: true },
+			]),
+			tool('search_records', 'Search records by criteria.', 'GET', '/{module}/search', [
+				{ name: 'module', in: 'path', required: true },
+				{ name: 'criteria', in: 'query', description: 'e.g. (Last_Name:equals:Smith)' },
+			]),
+			tool('create_record', 'Create records in a module.', 'POST', '/{module}', [
+				{ name: 'module', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"data":[{"Last_Name":"Smith"}]}' },
+			]),
+		],
+	},
+	xero: {
+		baseUrl: 'https://api.xero.com/api.xro/2.0',
+		tools: [
+			tool('get_organisation', 'Get the connected organisation.', 'GET', '/Organisation', []),
+			tool('list_contacts', 'List contacts.', 'GET', '/Contacts', []),
+			tool('list_invoices', 'List invoices.', 'GET', '/Invoices', []),
+			tool('list_accounts', 'List accounts.', 'GET', '/Accounts', []),
+		],
+	},
+	ga4: {
+		baseUrl: 'https://analyticsdata.googleapis.com/v1beta',
+		tools: [
+			tool('run_report', 'Run a GA4 report.', 'POST', '/properties/{propertyId}:runReport', [
+				{ name: 'propertyId', in: 'path', required: true, description: 'Numeric GA4 property ID' },
+				{ name: 'body', in: 'body', required: true, description: '{"dateRanges":[{"startDate":"7daysAgo","endDate":"today"}],"dimensions":[{"name":"country"}],"metrics":[{"name":"activeUsers"}]}' },
+			]),
+			tool('run_realtime_report', 'Run a realtime report.', 'POST', '/properties/{propertyId}:runRealtimeReport', [
+				{ name: 'propertyId', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"dimensions":[{"name":"country"}],"metrics":[{"name":"activeUsers"}]}' },
+			]),
+			tool('get_metadata', 'List available dimensions and metrics.', 'GET', '/properties/{propertyId}/metadata', [
+				{ name: 'propertyId', in: 'path', required: true },
+			]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.

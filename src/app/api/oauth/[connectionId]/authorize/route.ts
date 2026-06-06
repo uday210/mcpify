@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash, randomBytes } from 'crypto';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { signState } from '@/lib/oauth';
 import { appBaseUrl } from '@/lib/mcp-oauth';
 
 export const runtime = 'nodejs';
+
+function base64url(buf: Buffer): string {
+	return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 /**
  * Starts the OAuth 2.0 authorization-code flow for a connection: redirects the
@@ -53,6 +58,24 @@ export async function GET(
 	authUrl.searchParams.set('state', state);
 	if (oauth.access_type) authUrl.searchParams.set('access_type', oauth.access_type);
 	if (oauth.prompt) authUrl.searchParams.set('prompt', oauth.prompt);
+
+	// Provider-specific extra authorize params (e.g. Reddit duration=permanent).
+	if (oauth.authorize_params && typeof oauth.authorize_params === 'object') {
+		for (const [k, v] of Object.entries(oauth.authorize_params)) authUrl.searchParams.set(k, String(v));
+	}
+
+	// PKCE (required by X/Twitter, Xero). Persist the verifier on the connection
+	// so the callback can complete the exchange.
+	if (oauth.pkce) {
+		const verifier = base64url(randomBytes(48));
+		const challenge = base64url(createHash('sha256').update(verifier).digest());
+		authUrl.searchParams.set('code_challenge', challenge);
+		authUrl.searchParams.set('code_challenge_method', 'S256');
+		await supabase
+			.from('app_connections')
+			.update({ config: { ...connection.config, oauth: { ...oauth, pkce_verifier: verifier } } })
+			.eq('id', connectionId);
+	}
 
 	return NextResponse.redirect(authUrl.toString());
 }
