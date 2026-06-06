@@ -14,6 +14,64 @@ import {
 
 const SERVER_VERSION = '0.1.0';
 const DEFAULT_PROTOCOL = '2024-11-05';
+const PAGE_SIZE = 100;
+
+/** Opaque-cursor pagination over an array (MCP tools/list, resources/list). */
+function paginate<T>(items: T[], cursor?: string): { page: T[]; nextCursor?: string } {
+	let offset = 0;
+	if (cursor) {
+		const n = parseInt(Buffer.from(cursor, 'base64').toString('utf8'), 10);
+		if (Number.isFinite(n) && n > 0) offset = n;
+	}
+	const page = items.slice(offset, offset + PAGE_SIZE);
+	const next = offset + PAGE_SIZE;
+	return { page, nextCursor: next < items.length ? Buffer.from(String(next)).toString('base64') : undefined };
+}
+
+/** Built-in prompt templates generated from the server + its tools. */
+function buildPrompts(server: any, tools: ToolRow[]) {
+	return [
+		{
+			name: 'getting_started',
+			description: `Orient an assistant to the ${server.name || server.slug} MCP server and its tools.`,
+		},
+		{
+			name: 'run_tool',
+			description: 'Guidance for calling a specific tool on this server.',
+			arguments: [{ name: 'tool', description: 'The tool name to use', required: true }],
+		},
+	];
+}
+
+function renderPrompt(name: string, server: any, tools: ToolRow[], args: Record<string, any>) {
+	const label = server.name || server.slug;
+	if (name === 'getting_started') {
+		const list = tools.map((t) => `- ${t.name}: ${t.description || ''}`).join('\n') || '(no tools enabled)';
+		return [
+			{
+				role: 'user',
+				content: {
+					type: 'text',
+					text: `You can act on ${label} through these MCP tools:\n\n${list}\n\nPick the tool that fits my request, fill in its required arguments, and call it. Ask me for anything required that you don't have.`,
+				},
+			},
+		];
+	}
+	if (name === 'run_tool') {
+		const wanted = String(args.tool || '');
+		const tool = tools.find((t) => t.name === wanted);
+		const detail = tool
+			? `Tool "${tool.name}" — ${tool.description || ''}\nInput schema:\n${JSON.stringify(tool.input_schema || {}, null, 2)}`
+			: `Tool "${wanted}" was not found. Available: ${tools.map((t) => t.name).join(', ')}`;
+		return [
+			{
+				role: 'user',
+				content: { type: 'text', text: `Help me call this ${label} tool correctly.\n\n${detail}` },
+			},
+		];
+	}
+	return null;
+}
 
 // In-memory sliding-window rate limiter (per server). Matches the single-instance
 // deployment assumption already used for SSE sessions.
@@ -122,7 +180,11 @@ export async function handleRpc(
 				const requested = req.params?.protocolVersion;
 				response = rpcResult(id, {
 					protocolVersion: typeof requested === 'string' ? requested : DEFAULT_PROTOCOL,
-					capabilities: { tools: { listChanged: false } },
+					capabilities: {
+						tools: { listChanged: false },
+						resources: { listChanged: false },
+						prompts: { listChanged: false },
+					},
 					serverInfo: { name: server.name || server.slug, version: SERVER_VERSION },
 					instructions: server.description || undefined,
 				});
@@ -138,23 +200,95 @@ export async function handleRpc(
 
 			case 'tools/list': {
 				const tools = await loadTools(server.id);
+				const { page, nextCursor } = paginate(tools, req.params?.cursor);
 				response = rpcResult(id, {
-					tools: tools.map((t) => ({
+					tools: page.map((t) => ({
 						name: t.name,
 						description: t.description || '',
 						inputSchema: t.input_schema || { type: 'object', properties: {} },
 					})),
+					...(nextCursor ? { nextCursor } : {}),
 				});
 				break;
 			}
 
-			case 'resources/list':
-				response = rpcResult(id, { resources: [] });
+			case 'resources/list': {
+				// Expose read-only (GET, no required input) tools as resources.
+				const tools = await loadTools(server.id);
+				const readable = tools.filter(
+					(t) =>
+						(t.http_method || 'GET').toUpperCase() === 'GET' &&
+						!(Array.isArray(t.param_map) && t.param_map.some((p: any) => p.required))
+				);
+				const { page, nextCursor } = paginate(readable, req.params?.cursor);
+				response = rpcResult(id, {
+					resources: page.map((t) => ({
+						uri: `tool://${t.name}`,
+						name: t.name,
+						description: t.description || '',
+						mimeType: 'application/json',
+					})),
+					...(nextCursor ? { nextCursor } : {}),
+				});
 				break;
+			}
 
-			case 'prompts/list':
-				response = rpcResult(id, { prompts: [] });
+			case 'resources/read': {
+				const uri: string = req.params?.uri || '';
+				const toolName = uri.startsWith('tool://') ? uri.slice('tool://'.length) : '';
+				resource = toolName || uri;
+				if (!toolName) {
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `Unsupported resource URI: ${uri}`);
+					break;
+				}
+				if (!allowRequest(server.id, server.rate_limit_per_min || 0)) {
+					statusCode = 429;
+					errorMessage = `Rate limit exceeded (${server.rate_limit_per_min}/min)`;
+					response = rpcError(id, -32000, errorMessage);
+					break;
+				}
+				const tools = await loadTools(server.id);
+				const tool = tools.find((t) => t.name === toolName);
+				if (!tool) {
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `Unknown resource: ${toolName}`);
+					break;
+				}
+				const connection = tool.app_connection_id ? await loadConnection(tool.app_connection_id) : authed.connection;
+				if (!connection) {
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `No connection for resource: ${toolName}`);
+					break;
+				}
+				const result = await executeTool(connection, tool, {});
+				statusCode = result.isError ? 502 : 200;
+				const text = result.content?.map((c: any) => c.text).join('\n') || '';
+				respText = text.slice(0, 8000) || null;
+				response = rpcResult(id, {
+					contents: [{ uri, mimeType: 'application/json', text }],
+				});
 				break;
+			}
+
+			case 'prompts/list': {
+				const tools = await loadTools(server.id);
+				response = rpcResult(id, { prompts: buildPrompts(server, tools) });
+				break;
+			}
+
+			case 'prompts/get': {
+				const tools = await loadTools(server.id);
+				const name: string = req.params?.name || '';
+				const messages = renderPrompt(name, server, tools, req.params?.arguments || {});
+				if (!messages) {
+					statusCode = 400;
+					response = rpcError(id, INVALID_PARAMS, `Unknown prompt: ${name}`);
+					break;
+				}
+				response = rpcResult(id, { messages });
+				break;
+			}
 
 			case 'tools/call': {
 				const toolName = req.params?.name;
@@ -207,9 +341,11 @@ export async function handleRpc(
 	}
 
 	// Log meaningful calls (skip the chatty initialize/ping health traffic).
-	if (req.method === 'tools/call' || req.method === 'tools/list') {
+	if (req.method === 'tools/call' || req.method === 'tools/list' || req.method === 'resources/read') {
 		await logAccess(server, req.method, resource, statusCode, Date.now() - started, errorMessage, meta, reqBody, respText);
-		if (req.method === 'tools/call') await maybeAlert(server, resource, statusCode, errorMessage);
+		if (req.method === 'tools/call' || req.method === 'resources/read') {
+			await maybeAlert(server, resource, statusCode, errorMessage);
+		}
 	}
 
 	return response;
