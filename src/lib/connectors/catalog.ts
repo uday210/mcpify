@@ -1081,6 +1081,99 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_bookings', 'List bookings.', 'GET', '/bookings', []),
 		],
 	},
+	// --- CRM / search / finance / media ---
+	salesforce: {
+		baseUrl: 'https://login.salesforce.com',
+		tools: [
+			tool('soql_query', 'Run a SOQL query.', 'GET', '/services/data/v60.0/query', [
+				{ name: 'q', in: 'query', required: true, description: 'e.g. SELECT Id, Name FROM Account LIMIT 10' },
+			]),
+			tool('list_sobjects', 'List available objects.', 'GET', '/services/data/v60.0/sobjects', []),
+			tool('get_record', 'Get a record by type + id.', 'GET', '/services/data/v60.0/sobjects/{sobject}/{id}', [
+				{ name: 'sobject', in: 'path', required: true, description: 'e.g. Account, Contact' },
+				{ name: 'id', in: 'path', required: true },
+			]),
+		],
+	},
+	tavily: {
+		baseUrl: 'https://api.tavily.com',
+		tools: [
+			tool('search', 'AI web search.', 'POST', '/search', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"query":"latest AI news","max_results":5}' },
+			]),
+		],
+	},
+	serpapi: {
+		baseUrl: 'https://serpapi.com',
+		tools: [
+			tool('search', 'Search engine results.', 'GET', '/search', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'engine', in: 'query', description: 'google, bing, duckduckgo…' },
+			]),
+		],
+	},
+	apify: {
+		baseUrl: 'https://api.apify.com/v2',
+		tools: [
+			tool('list_actors', 'List your actors.', 'GET', '/acts', []),
+			tool('list_datasets', 'List datasets.', 'GET', '/datasets', []),
+		],
+	},
+	coinmarketcap: {
+		baseUrl: 'https://pro-api.coinmarketcap.com/v1',
+		tools: [
+			tool('listings_latest', 'Latest crypto listings.', 'GET', '/cryptocurrency/listings/latest', [
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('quotes_latest', 'Quotes for symbols.', 'GET', '/cryptocurrency/quotes/latest', [
+				{ name: 'symbol', in: 'query', required: true, description: 'e.g. BTC,ETH' },
+			]),
+		],
+	},
+	polygon: {
+		baseUrl: 'https://api.polygon.io',
+		tools: [
+			tool('list_tickers', 'List/search tickers.', 'GET', '/v3/reference/tickers', [
+				{ name: 'search', in: 'query' },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('ticker_details', 'Ticker details.', 'GET', '/v3/reference/tickers/{ticker}', [{ name: 'ticker', in: 'path', required: true }]),
+		],
+	},
+	newsdata: {
+		baseUrl: 'https://newsdata.io/api/1',
+		tools: [
+			tool('latest_news', 'Latest news.', 'GET', '/news', [
+				{ name: 'q', in: 'query' },
+				{ name: 'country', in: 'query', description: 'e.g. us,in' },
+			]),
+		],
+	},
+	pixabay: {
+		baseUrl: 'https://pixabay.com/api',
+		tools: [tool('search_images', 'Search free images.', 'GET', '/', [{ name: 'q', in: 'query', required: true }])],
+	},
+	lastfm: {
+		baseUrl: 'https://ws.audioscrobbler.com/2.0',
+		tools: [
+			tool('artist_info', 'Get artist info.', 'GET', '/', [
+				{ name: 'method', in: 'query', required: true, description: 'e.g. artist.getinfo' },
+				{ name: 'artist', in: 'query', description: 'Artist name' },
+				{ name: 'format', in: 'query', description: 'use json' },
+			]),
+		],
+	},
+	tenor: {
+		baseUrl: 'https://tenor.googleapis.com/v2',
+		tools: [tool('search_gifs', 'Search GIFs.', 'GET', '/search', [{ name: 'q', in: 'query', required: true }])],
+	},
+	wordpress: {
+		baseUrl: 'https://public-api.wordpress.com/rest/v1.1',
+		tools: [
+			tool('get_me', 'Get the WordPress.com user.', 'GET', '/me', []),
+			tool('list_sites', 'List your sites.', 'GET', '/me/sites', []),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.

@@ -88,6 +88,11 @@ export async function GET(request: NextRequest) {
 				Date.now() + Number(tokens.expires_in) * 1000
 			).toISOString();
 		}
+		// Salesforce (and similar) return the per-org API host in the token
+		// response — use it as the connection's base URL for subsequent calls.
+		if (tokens.instance_url) {
+			update.base_url = String(tokens.instance_url).replace(/\/$/, '');
+		}
 
 		await admin.from('app_connections').update(update).eq('id', connection.id);
 
