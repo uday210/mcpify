@@ -280,17 +280,25 @@ export default function NewConnectionPage() {
 					<div>
 						<div className="flex items-center justify-between mb-1">
 							<label className={labelCls}>Choose an app</label>
-							<span className="text-xs text-slate-400">{searching ? 'searching…' : '2,500+ apps'}</span>
+							<span className="text-xs text-slate-400">
+								{searching ? 'searching…' : `${apps.length} built-in`}
+							</span>
 						</div>
 						<div className="relative mb-3">
 							<Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
 							<input
 								className={`${input} pl-9`}
-								placeholder="Search 2,500+ apps (GitHub, Notion, Shopify, Twilio…)"
+								placeholder="Search built-in apps, or any of 2,500+ OpenAPI APIs…"
 								value={catalogQuery}
 								onChange={(e) => setCatalogQuery(e.target.value)}
 							/>
 						</div>
+						{!catalogQuery && (
+							<p className="text-xs text-slate-400 mb-3">
+								{apps.length} apps work instantly. Search to also import from 2,500+ OpenAPI specs or browse
+								3,300+ more.
+							</p>
+						)}
 						<div className="grid md:grid-cols-5 gap-4">
 							{/* App grid */}
 							<div className="md:col-span-2 max-h-80 overflow-y-auto pr-1 space-y-3">

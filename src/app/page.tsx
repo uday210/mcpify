@@ -75,7 +75,7 @@ export default function Home() {
 
 				{/* App logo strip */}
 				<section className="px-6 pb-20 max-w-4xl mx-auto">
-					<p className="text-center text-sm text-slate-500 mb-6">30+ built-in apps — or bring any OpenAPI spec</p>
+					<p className="text-center text-sm text-slate-500 mb-6">75+ built-in apps — or import any of 2,500+ OpenAPI specs</p>
 					<div className="flex flex-wrap justify-center gap-3">
 						{APPS.map((d) => (
 							<div
