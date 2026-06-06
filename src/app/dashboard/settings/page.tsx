@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send, Building2, Download, Trash2, Plug, Server, Activity } from 'lucide-react';
+import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send, Building2, Download, Upload, Trash2, Plug, Server, Activity } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/Toaster';
 import { getPrefs, setPrefs, type Preferences } from '@/lib/preferences';
@@ -126,14 +126,8 @@ function AccountTab() {
 	const exportData = async () => {
 		setExporting(true);
 		try {
-			const [conns, servers] = await Promise.all([
-				fetch('/api/connections').then((r) => r.json()),
-				fetch('/api/servers').then((r) => r.json()),
-			]);
-			const blob = new Blob(
-				[JSON.stringify({ exported_at: new Date().toISOString(), email: profile?.email, connections: conns, servers }, null, 2)],
-				{ type: 'application/json' }
-			);
+			const data = await fetch('/api/export').then((r) => r.json());
+			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
@@ -143,6 +137,22 @@ function AccountTab() {
 			toast('Export downloaded', 'success');
 		} finally {
 			setExporting(false);
+		}
+	};
+
+	const importData = async (file: File) => {
+		try {
+			const payload = JSON.parse(await file.text());
+			const r = await fetch('/api/import', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+			const d = await r.json();
+			if (!r.ok) return toast(d.error || 'Import failed', 'error');
+			toast(`Imported ${d.connectionsCreated} connection(s), ${d.serversCreated} server(s)`, 'success');
+		} catch {
+			toast('Could not read that file', 'error');
 		}
 	};
 
@@ -222,15 +232,32 @@ function AccountTab() {
 				</div>
 			</Section>
 
-			<Section title="Export your data" desc="Download your connections and servers as JSON (secrets excluded).">
-				<button
-					onClick={exportData}
-					disabled={exporting}
-					className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50"
-				>
-					<Download className="w-4 h-4" />
-					{exporting ? 'Preparing…' : 'Export JSON'}
-				</button>
+			<Section title="Import & export" desc="Back up or move your connections and servers between accounts. Secrets are never exported — you re-enter credentials after importing.">
+				<div className="flex flex-wrap gap-3">
+					<button
+						onClick={exportData}
+						disabled={exporting}
+						className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50"
+					>
+						<Download className="w-4 h-4" />
+						{exporting ? 'Preparing…' : 'Export JSON'}
+					</button>
+					<label className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition cursor-pointer">
+						<Upload className="w-4 h-4" />
+						Import JSON
+						<input
+							type="file"
+							accept="application/json,.json"
+							className="hidden"
+							onChange={(e) => {
+								const f = e.target.files?.[0];
+								if (f) importData(f);
+								e.target.value = '';
+							}}
+						/>
+					</label>
+				</div>
+				<p className="text-xs text-slate-400 mt-3">Imported connections start inactive until you add credentials. Existing names are skipped, not duplicated.</p>
 			</Section>
 
 			<div className="bg-white rounded-2xl border border-red-200 shadow-card p-6">
