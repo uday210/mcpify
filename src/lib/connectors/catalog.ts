@@ -621,7 +621,14 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				},
 			]),
 			tool('validate_address', 'Resolve/validate an address.', 'POST', '/address/v1/addresses/resolve', [
-				{ name: 'body', in: 'body', required: true, type: 'object', description: 'FedEx address resolve payload' },
+				{
+					name: 'body',
+					in: 'body',
+					required: true,
+					type: 'object',
+					description:
+						'{"addressesToValidate":[{"address":{"streetLines":["7372 PARKRIDGE BLVD"],"city":"IRVING","stateOrProvinceCode":"TX","postalCode":"75063","countryCode":"US"}}]}',
+				},
 			]),
 		],
 	},
