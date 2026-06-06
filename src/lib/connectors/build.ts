@@ -39,7 +39,13 @@ export async function buildConnectionInsert(
 		const catalog = getCatalogConnector(appSlug);
 		if (!catalog) throw new Error(`No tools defined for catalog app: ${appSlug}`);
 		appDefId = def.id;
-		baseUrl = baseUrl || catalog.baseUrl || def.base_url;
+		// Apps that need a per-account base URL (Shopify store, Jira/Zendesk site…)
+		if (def.config?.needs_base_url) {
+			if (!body.baseUrl) throw new Error('This app needs a Base URL (your account/store URL).');
+			baseUrl = body.baseUrl;
+		} else {
+			baseUrl = baseUrl || catalog.baseUrl || def.base_url;
+		}
 		tools = catalog.tools;
 		// Carry catalog OAuth endpoints into config for the OAuth flow.
 		if (def.config?.oauth) config.oauth = { ...def.config.oauth };

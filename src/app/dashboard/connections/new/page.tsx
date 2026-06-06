@@ -20,6 +20,8 @@ interface CatalogApp {
 	api_documentation_url: string | null;
 	tools: { name: string; description: string }[];
 	toolCount: number;
+	needs_base_url?: boolean;
+	base_url_hint?: string | null;
 }
 
 interface ManualTool {
@@ -180,7 +182,10 @@ export default function NewConnectionPage() {
 		}
 
 		const body: any = { name, connectorType, authType, credentials, config };
-		if (connectorType === 'catalog') body.appSlug = appSlug;
+		if (connectorType === 'catalog') {
+			body.appSlug = appSlug;
+			if (baseUrl) body.baseUrl = baseUrl;
+		}
 		if (connectorType === 'openapi') {
 			body.openapiUrl = openapiUrl || undefined;
 			body.openapiSpec = openapiSpec || undefined;
@@ -468,6 +473,20 @@ export default function NewConnectionPage() {
 										<button onClick={addTool} className="mt-3 flex items-center gap-1.5 text-sm text-cyan-600 hover:text-cyan-700"><Plus className="w-4 h-4" /> Add tool</button>
 									</div>
 								</>
+							)}
+
+							{/* per-account base URL (Shopify store, Jira/Zendesk site…) */}
+							{connectorType === 'catalog' && selectedApp?.needs_base_url && (
+								<div>
+									<label className={labelCls}>Base URL</label>
+									<input
+										className={input}
+										value={baseUrl}
+										onChange={(e) => setBaseUrl(e.target.value)}
+										placeholder={selectedApp.base_url_hint || 'https://your-account.example.com'}
+									/>
+									<p className="text-xs text-slate-400 mt-1">Your account/store-specific API URL.</p>
+								</div>
 							)}
 
 							{/* connection name */}

@@ -1260,6 +1260,125 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('get_check', 'Get a check by id.', 'GET', '/checks/{checkid}', [{ name: 'checkid', in: 'path', required: true }]),
 		],
 	},
+	// --- AI / dev quick-wins ---
+	gemini: {
+		baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+		tools: [
+			tool('list_models', 'List Gemini models.', 'GET', '/models', []),
+			tool('generate_content', 'Generate content with a model.', 'POST', '/models/{model}:generateContent', [
+				{ name: 'model', in: 'path', required: true, description: 'e.g. gemini-1.5-flash' },
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"contents":[{"parts":[{"text":"Hello"}]}]}' },
+			]),
+		],
+	},
+	openrouter: {
+		baseUrl: 'https://openrouter.ai/api/v1',
+		tools: [
+			tool('list_models', 'List models.', 'GET', '/models', []),
+			tool('chat', 'Chat completion (OpenAI-compatible).', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}' },
+			]),
+		],
+	},
+	deepgram: {
+		baseUrl: 'https://api.deepgram.com/v1',
+		tools: [tool('list_projects', 'List projects.', 'GET', '/projects', [])],
+	},
+	smartsheet: {
+		baseUrl: 'https://api.smartsheet.com/2.0',
+		tools: [
+			tool('list_sheets', 'List sheets.', 'GET', '/sheets', []),
+			tool('get_sheet', 'Get a sheet by id.', 'GET', '/sheets/{sheetId}', [{ name: 'sheetId', in: 'path', required: true }]),
+		],
+	},
+	razorpay: {
+		baseUrl: 'https://api.razorpay.com/v1',
+		tools: [
+			tool('list_payments', 'List payments.', 'GET', '/payments', [{ name: 'count', in: 'query', type: 'integer' }]),
+			tool('list_orders', 'List orders.', 'GET', '/orders', [{ name: 'count', in: 'query', type: 'integer' }]),
+		],
+	},
+	circleci: {
+		baseUrl: 'https://circleci.com/api/v2',
+		tools: [
+			tool('get_me', 'Get the current user.', 'GET', '/me', []),
+			tool('project_pipelines', 'List a project’s pipelines.', 'GET', '/project/{project_slug}/pipeline', [
+				{ name: 'project_slug', in: 'path', required: true, description: 'e.g. gh/org/repo' },
+			]),
+		],
+	},
+	fireworks: {
+		baseUrl: 'https://api.fireworks.ai/inference/v1',
+		tools: [
+			tool('list_models', 'List models.', 'GET', '/models', []),
+			tool('chat', 'Chat completion.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"accounts/fireworks/models/llama-v3p1-8b-instruct","messages":[{"role":"user","content":"hi"}]}' },
+			]),
+		],
+	},
+	googlemaps: {
+		baseUrl: 'https://maps.googleapis.com/maps/api',
+		tools: [
+			tool('geocode', 'Geocode an address.', 'GET', '/geocode/json', [{ name: 'address', in: 'query', required: true }]),
+			tool('place_search', 'Text search for places.', 'GET', '/place/textsearch/json', [{ name: 'query', in: 'query', required: true }]),
+		],
+	},
+	npm: {
+		baseUrl: 'https://registry.npmjs.org',
+		tools: [tool('get_package', 'Get package metadata.', 'GET', '/{package}', [{ name: 'package', in: 'path', required: true }])],
+	},
+	pypi: {
+		baseUrl: 'https://pypi.org/pypi',
+		tools: [tool('get_package', 'Get package metadata.', 'GET', '/{package}/json', [{ name: 'package', in: 'path', required: true }])],
+	},
+	google_drive: {
+		baseUrl: 'https://www.googleapis.com/drive/v3',
+		tools: [
+			tool('list_files', 'List/search files.', 'GET', '/files', [
+				{ name: 'q', in: 'query', description: "e.g. name contains 'report'" },
+				{ name: 'pageSize', in: 'query', type: 'integer' },
+			]),
+			tool('get_file', 'Get file metadata.', 'GET', '/files/{fileId}', [{ name: 'fileId', in: 'path', required: true }]),
+		],
+	},
+	google_docs: {
+		baseUrl: 'https://docs.googleapis.com/v1',
+		tools: [tool('get_document', 'Get a document.', 'GET', '/documents/{documentId}', [{ name: 'documentId', in: 'path', required: true }])],
+	},
+	// --- Per-account base URL apps ---
+	shopify: {
+		baseUrl: '',
+		tools: [
+			tool('list_products', 'List products.', 'GET', '/products.json', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_orders', 'List orders.', 'GET', '/orders.json', [{ name: 'status', in: 'query', description: 'any, open, closed' }]),
+			tool('list_customers', 'List customers.', 'GET', '/customers.json', []),
+		],
+	},
+	jira: {
+		baseUrl: '',
+		tools: [
+			tool('search_issues', 'Search issues with JQL.', 'GET', '/rest/api/3/search', [
+				{ name: 'jql', in: 'query', required: true, description: 'e.g. project = ABC ORDER BY created DESC' },
+			]),
+			tool('get_issue', 'Get an issue by key.', 'GET', '/rest/api/3/issue/{key}', [{ name: 'key', in: 'path', required: true }]),
+			tool('list_projects', 'List projects.', 'GET', '/rest/api/3/project', []),
+		],
+	},
+	zendesk: {
+		baseUrl: '',
+		tools: [
+			tool('search', 'Search Zendesk.', 'GET', '/api/v2/search.json', [{ name: 'query', in: 'query', required: true }]),
+			tool('list_tickets', 'List tickets.', 'GET', '/api/v2/tickets.json', []),
+		],
+	},
+	mailchimp: {
+		baseUrl: '',
+		tools: [
+			tool('ping', 'Health check.', 'GET', '/ping', []),
+			tool('list_audiences', 'List audiences/lists.', 'GET', '/lists', []),
+			tool('list_campaigns', 'List campaigns.', 'GET', '/campaigns', []),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.

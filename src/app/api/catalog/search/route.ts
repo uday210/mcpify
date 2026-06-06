@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
 				auth_help: a.config?.auth_help || null,
 				api_documentation_url: a.api_documentation_url,
 				supports_oauth: !!a.config?.oauth,
+				needs_base_url: !!a.config?.needs_base_url,
+				base_url_hint: a.config?.base_url_hint || null,
 				tools,
 				toolCount: tools.length,
 				source: 'curated' as const,
