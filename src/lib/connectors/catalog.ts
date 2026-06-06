@@ -999,6 +999,88 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('email_verifier', 'Verify an email address.', 'GET', '/email-verifier', [{ name: 'email', in: 'query', required: true }]),
 		],
 	},
+	// --- Productivity / dev / marketing / billing ---
+	clockify: {
+		baseUrl: 'https://api.clockify.me/api/v1',
+		tools: [
+			tool('get_user', 'Get the current user.', 'GET', '/user', []),
+			tool('list_workspaces', 'List workspaces.', 'GET', '/workspaces', []),
+		],
+	},
+	miro: {
+		baseUrl: 'https://api.miro.com/v2',
+		tools: [
+			tool('list_boards', 'List boards.', 'GET', '/boards', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_board', 'Get a board by id.', 'GET', '/boards/{board_id}', [{ name: 'board_id', in: 'path', required: true }]),
+		],
+	},
+	front: {
+		baseUrl: 'https://api2.frontapp.com',
+		tools: [
+			tool('list_conversations', 'List conversations.', 'GET', '/conversations', []),
+			tool('list_contacts', 'List contacts.', 'GET', '/contacts', []),
+		],
+	},
+	productboard: {
+		baseUrl: 'https://api.productboard.com',
+		tools: [
+			tool('list_features', 'List features.', 'GET', '/features', []),
+			tool('list_products', 'List products.', 'GET', '/products', []),
+		],
+	},
+	klaviyo: {
+		baseUrl: 'https://a.klaviyo.com/api',
+		tools: [
+			tool('get_profiles', 'List profiles.', 'GET', '/profiles', []),
+			tool('get_lists', 'List lists.', 'GET', '/lists', []),
+		],
+	},
+	newrelic: {
+		baseUrl: 'https://api.newrelic.com/v2',
+		tools: [tool('list_applications', 'List APM applications.', 'GET', '/applications.json', [])],
+	},
+	neon: {
+		baseUrl: 'https://console.neon.tech/api/v2',
+		tools: [
+			tool('list_projects', 'List Neon projects.', 'GET', '/projects', []),
+			tool('get_project', 'Get a project by id.', 'GET', '/projects/{project_id}', [{ name: 'project_id', in: 'path', required: true }]),
+		],
+	},
+	telnyx: {
+		baseUrl: 'https://api.telnyx.com/v2',
+		tools: [
+			tool('list_messaging_profiles', 'List messaging profiles.', 'GET', '/messaging_profiles', []),
+			tool('list_phone_numbers', 'List phone numbers.', 'GET', '/phone_numbers', []),
+		],
+	},
+	gumroad: {
+		baseUrl: 'https://api.gumroad.com/v2',
+		tools: [
+			tool('list_products', 'List products.', 'GET', '/products', []),
+			tool('list_sales', 'List sales.', 'GET', '/sales', []),
+		],
+	},
+	paddle: {
+		baseUrl: 'https://api.paddle.com',
+		tools: [
+			tool('list_products', 'List products.', 'GET', '/products', []),
+			tool('list_transactions', 'List transactions.', 'GET', '/transactions', []),
+		],
+	},
+	messagebird: {
+		baseUrl: 'https://rest.messagebird.com',
+		tools: [
+			tool('get_balance', 'Check account balance.', 'GET', '/balance', []),
+			tool('list_messages', 'List SMS messages.', 'GET', '/messages', []),
+		],
+	},
+	calcom: {
+		baseUrl: 'https://api.cal.com/v2',
+		tools: [
+			tool('get_me', 'Get the current user.', 'GET', '/me', []),
+			tool('list_bookings', 'List bookings.', 'GET', '/bookings', []),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
