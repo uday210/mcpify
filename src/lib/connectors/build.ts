@@ -53,6 +53,21 @@ export async function buildConnectionInsert(
 		if (def.config?.api_key_name) config.api_key_name = def.config.api_key_name;
 		if (def.config?.static_headers) config.static_headers = def.config.static_headers;
 		if (def.config?.token_path_template) config.token_path_template = def.config.token_path_template;
+
+		// Per-tenant OAuth domain (Salesforce My Domain/sandbox, GitLab self-managed,
+		// etc.): the user supplies their login/instance URL, templated into the
+		// authorize/token endpoints (and used as the API base until a token response
+		// returns a more specific instance_url).
+		if (def.config?.needs_oauth_domain) {
+			const domain = normalizeDomain(body.oauthDomain || def.config.oauth_default_domain || '');
+			if (!domain) throw new Error('This app needs a login/instance URL (e.g. your Salesforce My Domain).');
+			config.oauth_domain = domain;
+			if (config.oauth) {
+				if (config.oauth.authorize_url) config.oauth.authorize_url = config.oauth.authorize_url.split('{domain}').join(domain);
+				if (config.oauth.token_url) config.oauth.token_url = config.oauth.token_url.split('{domain}').join(domain);
+			}
+			baseUrl = domain;
+		}
 	} else if (connectorType === 'openapi') {
 		let specText: string = body.openapiSpec || '';
 		if (!specText && body.openapiUrl) {
@@ -149,6 +164,14 @@ export async function buildConnectionInsert(
 	};
 
 	return { insert, toolCount: tools.length };
+}
+
+/** Normalizes a user-supplied OAuth domain: trims, drops trailing slash, adds https://. */
+function normalizeDomain(raw: string): string {
+	let d = String(raw || '').trim();
+	if (!d) return '';
+	if (!/^https?:\/\//i.test(d)) d = `https://${d}`;
+	return d.replace(/\/+$/, '');
 }
 
 function normalizeManualTools(input: any): GeneratedTool[] {

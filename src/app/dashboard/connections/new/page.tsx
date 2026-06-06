@@ -22,6 +22,10 @@ interface CatalogApp {
 	toolCount: number;
 	needs_base_url?: boolean;
 	base_url_hint?: string | null;
+	needs_oauth_domain?: boolean;
+	oauth_domain_label?: string | null;
+	oauth_domain_hint?: string | null;
+	oauth_default_domain?: string | null;
 }
 
 interface ManualTool {
@@ -69,6 +73,7 @@ export default function NewConnectionPage() {
 	const [oauthTokenUrl, setOauthTokenUrl] = useState('');
 	const [oauthScopes, setOauthScopes] = useState('');
 	const [accountId, setAccountId] = useState('');
+	const [oauthDomain, setOauthDomain] = useState('');
 	// test-before-save
 	const [testing, setTesting] = useState(false);
 	const [testResult, setTestResult] = useState<{ ok: boolean; skipped?: boolean; warn?: boolean; message: string } | null>(null);
@@ -123,6 +128,7 @@ export default function NewConnectionPage() {
 		setAppSlug(a.slug);
 		setName((n) => n || a.name);
 		setAuthType((a.auth_type as AuthType) || 'api_key');
+		setOauthDomain(a.oauth_default_domain || '');
 		setError(null);
 	};
 	const pickExternal = (a: any) => {
@@ -193,6 +199,7 @@ export default function NewConnectionPage() {
 		if (connectorType === 'catalog') {
 			body.appSlug = appSlug;
 			if (baseUrl) body.baseUrl = baseUrl;
+			if (oauthDomain) body.oauthDomain = oauthDomain;
 		}
 		if (connectorType === 'openapi') {
 			body.openapiUrl = openapiUrl || undefined;
@@ -628,6 +635,21 @@ export default function NewConnectionPage() {
 										</div>
 									</div>
 								))}
+							{authType === 'oauth' && selectedApp?.needs_oauth_domain && (
+								<div>
+									<label className={labelCls}>{selectedApp.oauth_domain_label || 'Login / Instance URL'}</label>
+									<input
+										className={input}
+										value={oauthDomain}
+										onChange={(e) => setOauthDomain(e.target.value)}
+										placeholder={selectedApp.oauth_default_domain || 'https://your-instance.example.com'}
+									/>
+									{selectedApp.oauth_domain_hint && (
+										<p className="text-xs text-slate-500 mt-1">{selectedApp.oauth_domain_hint}</p>
+									)}
+								</div>
+							)}
+
 							{(authType === 'oauth' || authType === 'oauth2_cc') && (
 								<div className="space-y-3">
 									<div className="grid grid-cols-2 gap-3">
