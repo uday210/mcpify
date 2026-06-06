@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
@@ -71,7 +71,7 @@ export default function NewConnectionPage() {
 	const [accountId, setAccountId] = useState('');
 	// test-before-save
 	const [testing, setTesting] = useState(false);
-	const [testResult, setTestResult] = useState<{ ok: boolean; skipped?: boolean; message: string } | null>(null);
+	const [testResult, setTestResult] = useState<{ ok: boolean; skipped?: boolean; warn?: boolean; message: string } | null>(null);
 	// openapi
 	const [openapiUrl, setOpenapiUrl] = useState('');
 	const [openapiSpec, setOpenapiSpec] = useState('');
@@ -217,7 +217,7 @@ export default function NewConnectionPage() {
 				body: JSON.stringify(buildBody()),
 			});
 			const d = await r.json();
-			setTestResult({ ok: !!d.ok, skipped: !!d.skipped, message: d.message || (d.ok ? 'Reachable' : 'Failed') });
+			setTestResult({ ok: !!d.ok, skipped: !!d.skipped, warn: !!d.warn, message: d.message || (d.ok ? 'Verified' : 'Failed') });
 		} catch (e: any) {
 			setTestResult({ ok: false, message: e?.message || 'Test failed' });
 		} finally {
@@ -699,13 +699,17 @@ export default function NewConnectionPage() {
 											? 'bg-slate-50 border-slate-200 text-slate-600'
 											: testResult.ok
 												? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-												: 'bg-red-50 border-red-200 text-red-700'
+												: testResult.warn
+													? 'bg-amber-50 border-amber-200 text-amber-700'
+													: 'bg-red-50 border-red-200 text-red-700'
 									}`}
 								>
 									{testResult.skipped ? (
 										<Info className="w-4 h-4 shrink-0 mt-0.5" />
 									) : testResult.ok ? (
 										<CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+									) : testResult.warn ? (
+										<AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
 									) : (
 										<XCircle className="w-4 h-4 shrink-0 mt-0.5" />
 									)}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Trash2, CheckCircle2, XCircle, Plus, Server, Boxes } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Trash2, CheckCircle2, XCircle, Plus, Server, Boxes, AlertTriangle } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { toast } from '@/components/Toaster';
 import { Skeleton } from '@/components/Skeleton';
@@ -76,7 +76,11 @@ export default function ConnectionDetailPage() {
 							<span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">{conn.auth_type}</span>
 							{conn.last_verified_at ? (
 								conn.error_message ? (
-									<span className="flex items-center gap-1 text-xs text-red-600"><XCircle className="w-3.5 h-3.5" />{conn.error_message}</span>
+									conn.error_message.startsWith('⚠') ? (
+										<span className="flex items-center gap-1 text-xs text-amber-600"><AlertTriangle className="w-3.5 h-3.5" />{conn.error_message.replace(/^⚠\s*/, '')}</span>
+									) : (
+										<span className="flex items-center gap-1 text-xs text-red-600"><XCircle className="w-3.5 h-3.5" />{conn.error_message}</span>
+									)
 								) : (
 									<span className="flex items-center gap-1 text-xs text-green-600"><CheckCircle2 className="w-3.5 h-3.5" />Verified</span>
 								)

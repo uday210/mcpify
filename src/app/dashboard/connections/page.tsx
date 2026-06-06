@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plug, Plus, CheckCircle2, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import { Plug, Plus, CheckCircle2, XCircle, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { toast } from '@/components/Toaster';
 import { Skeleton } from '@/components/Skeleton';
@@ -56,7 +56,7 @@ function ConnectionsInner() {
 		try {
 			const r = await fetch(`/api/connections/${id}/verify`, { method: 'POST' });
 			const d = await r.json();
-			toast(d.message || (d.ok ? 'Reachable' : 'Failed'), d.ok ? 'success' : 'error');
+			toast(d.message || (d.ok ? 'Verified' : 'Failed'), d.ok ? 'success' : d.warn ? 'info' : 'error');
 			load();
 		} finally {
 			setVerifying(null);
@@ -138,10 +138,17 @@ function ConnectionsInner() {
 										<span className="text-slate-500">{c.toolCount} tools</span>
 										{c.last_verified_at ? (
 											c.error_message ? (
-												<span className="flex items-center gap-1 text-red-600">
-													<XCircle className="w-3.5 h-3.5" />
-													{c.error_message}
-												</span>
+												c.error_message.startsWith('⚠') ? (
+													<span className="flex items-center gap-1 text-amber-600">
+														<AlertTriangle className="w-3.5 h-3.5" />
+														{c.error_message.replace(/^⚠\s*/, '')}
+													</span>
+												) : (
+													<span className="flex items-center gap-1 text-red-600">
+														<XCircle className="w-3.5 h-3.5" />
+														{c.error_message}
+													</span>
+												)
 											) : (
 												<span className="flex items-center gap-1 text-green-600">
 													<CheckCircle2 className="w-3.5 h-3.5" />

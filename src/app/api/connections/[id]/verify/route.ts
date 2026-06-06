@@ -23,11 +23,13 @@ export async function POST(
 
 	const result = await pingConnection(connection);
 
+	// Persist health: null = verified, "⚠ …" = reachable-but-unconfirmed, plain = failed.
+	const stored = result.ok ? null : result.warn ? `⚠ ${result.message}` : result.message;
 	await supabase
 		.from('app_connections')
 		.update({
 			last_verified_at: new Date().toISOString(),
-			error_message: result.ok ? null : result.message,
+			error_message: stored,
 		})
 		.eq('id', id);
 

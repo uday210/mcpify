@@ -151,9 +151,21 @@ function safeJson(s: string): any {
  */
 export async function pingConnection(
 	connection: any
-): Promise<{ ok: boolean; status: number; message: string }> {
+): Promise<{ ok: boolean; warn?: boolean; status: number; message: string }> {
 	const baseUrl: string = (connection.base_url || '').replace(/\/$/, '');
 	if (!baseUrl) return { ok: false, status: 0, message: 'No base URL configured' };
+
+	// Prefer a real read-only tool with no required inputs — a 2xx from it is a
+	// genuine signal that the credentials work. Fall back to the API root.
+	const tools: any[] = Array.isArray((connection.config || {}).tools) ? connection.config.tools : [];
+	const probe = tools.find(
+		(t) =>
+			(t.http_method || 'GET').toUpperCase() === 'GET' &&
+			!String(t.path_template || '').includes('{') &&
+			!(Array.isArray(t.param_map) && t.param_map.some((p: any) => p.required))
+	);
+	const pingedRoot = !probe;
+	const path = probe ? String(probe.path_template || '/') : '/';
 
 	const headers: Record<string, string> = { Accept: 'application/json' };
 	const query = new URLSearchParams();
@@ -164,11 +176,31 @@ export async function pingConnection(
 		}
 		await applyAuth(connection, headers, query);
 		const qs = query.toString();
-		const resp = await fetch(`${baseUrl}/${qs ? '?' + qs : ''}`, { method: 'GET', headers });
-		if (resp.status === 401 || resp.status === 403) {
-			return { ok: false, status: resp.status, message: 'Credentials were rejected (auth error)' };
+		const url = `${baseUrl}${path.startsWith('/') ? path : '/' + path}${qs ? '?' + qs : ''}`;
+		const resp = await fetch(url, { method: 'GET', headers });
+		const s = resp.status;
+
+		if (s >= 200 && s < 300) {
+			return { ok: true, status: s, message: `Verified — credentials accepted (HTTP ${s})` };
 		}
-		return { ok: true, status: resp.status, message: `Reachable (HTTP ${resp.status})` };
+		if (s === 401 || s === 403) {
+			return { ok: false, status: s, message: `Credentials were rejected (HTTP ${s})` };
+		}
+		if (s === 429) {
+			return { ok: true, status: s, message: 'Reachable — rate limited (HTTP 429), credentials likely OK' };
+		}
+		if (s >= 500) {
+			return { ok: false, warn: true, status: s, message: `Upstream is returning errors (HTTP ${s})` };
+		}
+		// Other 4xx (404/400/405/422…): host answered but we couldn't confirm auth.
+		return {
+			ok: false,
+			warn: true,
+			status: s,
+			message: pingedRoot
+				? `Host reachable, but credentials weren’t confirmed (root returned HTTP ${s}). Try a tool call.`
+				: `Host reachable, but the test endpoint returned HTTP ${s} — credentials not confirmed.`,
+		};
 	} catch (err: any) {
 		return { ok: false, status: 0, message: err?.message || 'Connection failed' };
 	}
