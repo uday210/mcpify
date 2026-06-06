@@ -23,14 +23,31 @@ export default function ServerDetailPage() {
 	const [tools, setTools] = useState<any[]>([]);
 	const [toolsDirty, setToolsDirty] = useState(false);
 	const [savingTools, setSavingTools] = useState(false);
+	const [rateLimit, setRateLimit] = useState('');
+	const [savingLimit, setSavingLimit] = useState(false);
 
 	const load = () => {
 		fetch(`/api/servers/${id}`)
 			.then((r) => r.json())
-			.then((d) => setServer(d))
+			.then((d) => {
+				setServer(d);
+				setRateLimit(d?.rate_limit_per_min ? String(d.rate_limit_per_min) : '');
+			})
 			.finally(() => setLoading(false));
 	};
 	useEffect(load, [id]);
+
+	const saveLimit = async () => {
+		setSavingLimit(true);
+		const r = await fetch(`/api/servers/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ rateLimitPerMin: rateLimit === '' ? 0 : Number(rateLimit) }),
+		});
+		setSavingLimit(false);
+		toast(r.ok ? 'Rate limit saved' : 'Could not save (run migration 020?)', r.ok ? 'success' : 'error');
+		if (r.ok) load();
+	};
 
 	const loadTools = () =>
 		fetch(`/api/servers/${id}/tools`)
@@ -240,6 +257,35 @@ export default function ServerDetailPage() {
 					</div>
 				);
 			})()}
+
+			{/* Rate limit */}
+			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+				<h2 className="font-semibold text-slate-900 mb-1">Rate limit</h2>
+				<p className="text-sm text-slate-500 mb-4">Cap how many tool calls this server accepts per minute. Leave blank for unlimited.</p>
+				<div className="flex items-end gap-3">
+					<div>
+						<label className="block text-xs font-medium text-slate-500 mb-1">Calls / minute</label>
+						<input
+							type="number"
+							min={0}
+							value={rateLimit}
+							onChange={(e) => setRateLimit(e.target.value)}
+							placeholder="Unlimited"
+							className="w-40 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none"
+						/>
+					</div>
+					<button
+						onClick={saveLimit}
+						disabled={savingLimit}
+						className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50"
+					>
+						{savingLimit ? 'Saving…' : 'Save'}
+					</button>
+					<span className="text-xs text-slate-400 pb-2.5">
+						Over-limit calls return a 429 error to the client.
+					</span>
+				</div>
+			</div>
 
 			{/* Connect to a client */}
 			<ServerConnect

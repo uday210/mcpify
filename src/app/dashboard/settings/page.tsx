@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock } from 'lucide-react';
+import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/Toaster';
 import { getPrefs, setPrefs, type Preferences } from '@/lib/preferences';
 
-type Tab = 'account' | 'security' | 'preferences';
+type Tab = 'account' | 'security' | 'preferences' | 'notifications';
 
 const input =
 	'w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none';
@@ -18,6 +18,7 @@ export default function SettingsPage() {
 	const tabs: { id: Tab; label: string; icon: any }[] = [
 		{ id: 'account', label: 'Account', icon: User },
 		{ id: 'security', label: 'Security & keys', icon: ShieldCheck },
+		{ id: 'notifications', label: 'Notifications', icon: Bell },
 		{ id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
 	];
 
@@ -48,6 +49,7 @@ export default function SettingsPage() {
 				<div className="flex-1 min-w-0 max-w-2xl">
 					{tab === 'account' && <AccountTab />}
 					{tab === 'security' && <SecurityTab />}
+					{tab === 'notifications' && <NotificationsTab />}
 					{tab === 'preferences' && <PreferencesTab />}
 				</div>
 			</div>
@@ -276,6 +278,83 @@ function SecurityTab() {
 				)}
 			</Section>
 		</>
+	);
+}
+
+function NotificationsTab() {
+	const [orgId, setOrgId] = useState<string | null>(null);
+	const [webhook, setWebhook] = useState('');
+	const [alertOnError, setAlertOnError] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [testing, setTesting] = useState(false);
+
+	useEffect(() => {
+		fetch('/api/profile')
+			.then((r) => r.json())
+			.then((d) => {
+				setOrgId(d.org?.id || null);
+				setWebhook(d.notification_config?.webhook_url || '');
+				setAlertOnError(!!d.notification_config?.alert_on_error);
+			})
+			.catch(() => {});
+	}, []);
+
+	const save = async () => {
+		setSaving(true);
+		const r = await fetch('/api/profile', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ org_id: orgId, notification_config: { webhook_url: webhook, alert_on_error: alertOnError } }),
+		});
+		setSaving(false);
+		toast(r.ok ? 'Notifications saved' : 'Could not save', r.ok ? 'success' : 'error');
+	};
+
+	const sendTest = async () => {
+		setTesting(true);
+		const r = await fetch('/api/notifications/test', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ webhook_url: webhook }),
+		});
+		const d = await r.json();
+		setTesting(false);
+		toast(d.message || (d.ok ? 'Sent' : 'Failed'), d.ok ? 'success' : 'error');
+	};
+
+	return (
+		<Section title="Error alerts" desc="POST a JSON alert to a webhook (Slack, Discord, your own endpoint) whenever a tool call fails.">
+			<div className="space-y-4">
+				<label className="flex items-center gap-3 cursor-pointer">
+					<input type="checkbox" checked={alertOnError} onChange={(e) => setAlertOnError(e.target.checked)} className="w-4 h-4 rounded accent-cyan-600" />
+					<span className="text-sm text-slate-700">Send a webhook when a tool call errors</span>
+				</label>
+				<div>
+					<label className={label}>Webhook URL</label>
+					<input className={input} value={webhook} onChange={(e) => setWebhook(e.target.value)} placeholder="https://hooks.slack.com/services/…" />
+				</div>
+				<div className="flex gap-3">
+					<button
+						onClick={save}
+						disabled={saving}
+						className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lift transition disabled:opacity-50"
+					>
+						{saving ? 'Saving…' : 'Save'}
+					</button>
+					<button
+						onClick={sendTest}
+						disabled={testing || !webhook}
+						className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50 flex items-center gap-2"
+					>
+						<Send className="w-4 h-4" />
+						{testing ? 'Sending…' : 'Send test'}
+					</button>
+				</div>
+				<p className="text-xs text-slate-400">
+					Requires the ops migration (020). Payload: <code className="text-slate-500">{`{type, server, tool, status_code, error, at}`}</code>
+				</p>
+			</div>
+		</Section>
 	);
 }
 

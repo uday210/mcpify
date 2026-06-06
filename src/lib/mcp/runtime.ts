@@ -15,6 +15,56 @@ import {
 const SERVER_VERSION = '0.1.0';
 const DEFAULT_PROTOCOL = '2024-11-05';
 
+// In-memory sliding-window rate limiter (per server). Matches the single-instance
+// deployment assumption already used for SSE sessions.
+const rateWindows = new Map<string, number[]>();
+
+/** Returns true if this call is allowed; records it. limit<=0 means unlimited. */
+function allowRequest(serverId: string, limit: number): boolean {
+	if (!limit || limit <= 0) return true;
+	const now = Date.now();
+	const cutoff = now - 60_000;
+	const hits = (rateWindows.get(serverId) || []).filter((t) => t > cutoff);
+	if (hits.length >= limit) {
+		rateWindows.set(serverId, hits);
+		return false;
+	}
+	hits.push(now);
+	rateWindows.set(serverId, hits);
+	return true;
+}
+
+/** Fire a webhook alert when a call errors, if the org has alerts enabled. */
+async function maybeAlert(server: any, resource: string | null, statusCode: number, errorMessage?: string) {
+	if (statusCode < 400) return;
+	try {
+		const admin = createAdminClient();
+		const { data: org } = await admin
+			.from('organizations')
+			.select('notification_config')
+			.eq('id', server.org_id)
+			.maybeSingle();
+		const cfg = (org as any)?.notification_config || {};
+		if (!cfg.alert_on_error || !cfg.webhook_url) return;
+		// Fire-and-forget; never block the response on the webhook.
+		void fetch(cfg.webhook_url, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: 'mcpify.tool_error',
+				server: server.slug,
+				server_name: server.name,
+				tool: resource,
+				status_code: statusCode,
+				error: errorMessage || null,
+				at: new Date().toISOString(),
+			}),
+		}).catch(() => {});
+	} catch {
+		/* best-effort */
+	}
+}
+
 interface ToolRow {
 	name: string;
 	description: string | null;
@@ -115,6 +165,13 @@ export async function handleRpc(
 					response = rpcError(id, INVALID_PARAMS, 'Missing tool name');
 					break;
 				}
+				// Per-server rate limit (calls/min).
+				if (!allowRequest(server.id, server.rate_limit_per_min || 0)) {
+					statusCode = 429;
+					errorMessage = `Rate limit exceeded (${server.rate_limit_per_min}/min)`;
+					response = rpcError(id, -32000, errorMessage);
+					break;
+				}
 				const tools = await loadTools(server.id);
 				const tool = tools.find((t) => t.name === toolName);
 				if (!tool) {
@@ -152,6 +209,7 @@ export async function handleRpc(
 	// Log meaningful calls (skip the chatty initialize/ping health traffic).
 	if (req.method === 'tools/call' || req.method === 'tools/list') {
 		await logAccess(server, req.method, resource, statusCode, Date.now() - started, errorMessage, meta, reqBody, respText);
+		if (req.method === 'tools/call') await maybeAlert(server, resource, statusCode, errorMessage);
 	}
 
 	return response;

@@ -55,6 +55,10 @@ export async function PATCH(
 	if (typeof body.description === 'string') update.description = body.description;
 	if (typeof body.is_active === 'boolean') update.is_active = body.is_active;
 	if (typeof body.auth_required === 'boolean') update.auth_required = body.auth_required;
+	if (body.rateLimitPerMin !== undefined) {
+		const n = Number(body.rateLimitPerMin);
+		update.rate_limit_per_min = Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+	}
 
 	// Switch inbound auth mode (none | api_key | oauth).
 	if (['none', 'api_key', 'oauth'].includes(body.authMode)) {

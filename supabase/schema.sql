@@ -1039,3 +1039,7 @@ VALUES
   ('MessageBird', 'messagebird', 'SMS and balance via Bird (MessageBird).', 'https://rest.messagebird.com', 'custom', '{}', 'https://docs.bird.com/api', '{"header_name": "Authorization", "auth_help": "Paste as: AccessKey YOUR_KEY"}'::jsonb),
   ('Cal.com', 'calcom', 'Scheduling: bookings and profile via Cal.com.', 'https://api.cal.com/v2', 'bearer', '{}', 'https://cal.com/docs/api-reference', '{"static_headers": {"cal-api-version": "2024-08-13"}, "auth_help": "Create an API key at https://app.cal.com/settings/developer/api-keys."}'::jsonb)
 ON CONFLICT (slug) DO NOTHING;
+
+-- ============================ ops: rate limits + alerts (migration 020) =====
+ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS rate_limit_per_min INTEGER;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notification_config JSONB DEFAULT '{}'::jsonb;
