@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { executeTool } from '@/lib/proxy';
+import { redactObject, redactText } from '@/lib/mcp/redact';
 import type { AuthedServer } from '@/lib/mcp/auth';
 import {
 	JsonRpcRequest,
@@ -373,8 +374,9 @@ async function logAccess(
 			error_message: errorMessage || null,
 			client_ip: meta.clientIp || null,
 			user_agent: meta.userAgent || null,
-			request_body: requestBody || null,
-			response_body: responseBody || null,
+			// Redact secrets before persisting either body.
+			request_body: requestBody ? redactObject(requestBody) : null,
+			response_body: redactText(responseBody),
 		});
 		await admin
 			.from('mcp_servers')
@@ -386,6 +388,14 @@ async function logAccess(
 					: {}),
 			})
 			.eq('id', server.id);
+
+		// Opportunistic retention: occasionally prune logs past the retention window
+		// (no cron required). Disable with MCP_LOG_RETENTION_DAYS=0.
+		const retentionDays = Number(process.env.MCP_LOG_RETENTION_DAYS ?? 30);
+		if (retentionDays > 0 && Math.random() < 0.02) {
+			const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
+			await admin.from('mcp_access_logs').delete().lt('created_at', cutoff);
+		}
 	} catch {
 		// best-effort logging; never fail the request because logging failed
 	}
