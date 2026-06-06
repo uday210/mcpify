@@ -6,7 +6,12 @@ interface ToolDef {
 	http_method: string;
 	path_template: string;
 	param_map: Array<Record<string, any>>;
+	input_schema?: { required?: string[]; [k: string]: any };
 }
+
+// Default upstream timeout; overridable per connection via config.timeout_ms.
+const DEFAULT_TIMEOUT_MS = 30_000;
+const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 
 export interface ToolResult {
 	content: Array<{ type: 'text'; text: string }>;
@@ -28,6 +33,14 @@ export async function executeTool(
 		const baseUrl: string = (connection.base_url || '').replace(/\/$/, '');
 		if (!baseUrl) {
 			return errorResult('Connection has no base URL configured.');
+		}
+
+		// --- Validate required inputs up front for a clear error (vs an opaque
+		//     upstream 400). Required fields come from the tool's JSON schema.
+		const required: string[] = Array.isArray(tool.input_schema?.required) ? tool.input_schema!.required : [];
+		const missing = required.filter((k) => args[k] === undefined || args[k] === null || args[k] === '');
+		if (missing.length) {
+			return errorResult(`Missing required argument(s): ${missing.join(', ')}.`);
 		}
 
 		// --- Distribute args into path / query / header / body per param_map.
@@ -113,7 +126,29 @@ export async function executeTool(
 			init.body = JSON.stringify(body);
 		}
 
-		const resp = await fetch(url, init);
+		const timeoutMs = Number((connection.config || {}).timeout_ms) || DEFAULT_TIMEOUT_MS;
+		const isWrite = writeMethod;
+
+		const doFetch = () => fetchWithTimeout(url, init, timeoutMs);
+
+		let resp = await doFetch();
+
+		// On a 401 for an OAuth connection, force a token refresh and retry once —
+		// covers tokens revoked before their stated expiry.
+		if (resp.status === 401 && connection.auth_type === 'oauth') {
+			const fresh = await getOAuthAccessToken(connection, true).catch(() => null);
+			if (fresh) {
+				headers['Authorization'] = `Bearer ${fresh}`;
+				resp = await doFetch();
+			}
+		}
+
+		// Transient upstream errors: retry idempotent (non-write) calls with backoff.
+		for (let attempt = 0; attempt < 2 && RETRYABLE_STATUS.has(resp.status) && !isWrite; attempt++) {
+			await sleep(250 * (attempt + 1));
+			resp = await doFetch();
+		}
+
 		const text = await resp.text();
 		let pretty = text;
 		try {
@@ -134,6 +169,24 @@ export async function executeTool(
 
 function errorResult(message: string): ToolResult {
 	return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** fetch() with an abort-based timeout that yields a clear error message. */
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		return await fetch(url, { ...init, signal: controller.signal });
+	} catch (err: any) {
+		if (err?.name === 'AbortError') {
+			throw new Error(`Upstream request timed out after ${Math.round(timeoutMs / 1000)}s`);
+		}
+		throw err;
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 function safeJson(s: string): any {
@@ -357,11 +410,11 @@ function safeDecrypt(hex: string): Record<string, any> {
  * Returns a valid OAuth access token for the connection, refreshing it via the
  * provider token endpoint if it has expired and a refresh token is available.
  */
-async function getOAuthAccessToken(connection: any): Promise<string | null> {
+async function getOAuthAccessToken(connection: any, force = false): Promise<string | null> {
 	const access = connection.oauth_token ? safeDecrypt(connection.oauth_token).value : null;
 	const expiresAt = connection.oauth_expires_at ? new Date(connection.oauth_expires_at).getTime() : 0;
 	const stillValid = access && (!expiresAt || expiresAt - Date.now() > 60_000);
-	if (stillValid) return access;
+	if (stillValid && !force) return access;
 
 	const refresh = connection.oauth_refresh_token ? safeDecrypt(connection.oauth_refresh_token).value : null;
 	const oauth = (connection.config || {}).oauth || {};
