@@ -52,6 +52,7 @@ export async function GET(
 	}
 	authUrl.searchParams.set('state', state);
 	if (oauth.access_type) authUrl.searchParams.set('access_type', oauth.access_type);
+	if (oauth.prompt) authUrl.searchParams.set('prompt', oauth.prompt);
 
 	return NextResponse.redirect(authUrl.toString());
 }

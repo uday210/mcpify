@@ -673,6 +673,126 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 		],
 	},
+	// --- Payments / dev / AI / Google / Microsoft ---
+	paypal: {
+		baseUrl: 'https://api-m.paypal.com',
+		tools: [
+			tool('list_invoices', 'List invoices.', 'GET', '/v2/invoicing/invoices', [
+				{ name: 'page_size', in: 'query', type: 'integer' },
+				{ name: 'total_required', in: 'query', description: 'true/false' },
+			]),
+			tool('list_transactions', 'List transactions (last 31 days max).', 'GET', '/v1/reporting/transactions', [
+				{ name: 'start_date', in: 'query', required: true, description: 'RFC3339, e.g. 2026-05-01T00:00:00Z' },
+				{ name: 'end_date', in: 'query', required: true, description: 'RFC3339' },
+			]),
+		],
+	},
+	netlify: {
+		baseUrl: 'https://api.netlify.com/api/v1',
+		tools: [
+			tool('list_sites', 'List your sites.', 'GET', '/sites', []),
+			tool('get_site', 'Get a site by id.', 'GET', '/sites/{site_id}', [{ name: 'site_id', in: 'path', required: true }]),
+			tool('list_deploys', 'List a site’s deploys.', 'GET', '/sites/{site_id}/deploys', [{ name: 'site_id', in: 'path', required: true }]),
+		],
+	},
+	brevo: {
+		baseUrl: 'https://api.brevo.com/v3',
+		tools: [
+			tool('get_account', 'Get account info.', 'GET', '/account', []),
+			tool('list_contacts', 'List contacts.', 'GET', '/contacts', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('send_email', 'Send a transactional email.', 'POST', '/smtp/email', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "sender":{"email":"a@b.com"}, "to":[{"email":"c@d.com"}], "subject":"Hi", "htmlContent":"<p>Hi</p>" }' },
+			]),
+		],
+	},
+	postmark: {
+		baseUrl: 'https://api.postmarkapp.com',
+		tools: [
+			tool('get_server', 'Get the server config.', 'GET', '/server', []),
+			tool('send_email', 'Send an email.', 'POST', '/email', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "From":"a@b.com", "To":"c@d.com", "Subject":"Hi", "TextBody":"Hello" }' },
+			]),
+		],
+	},
+	cohere: {
+		baseUrl: 'https://api.cohere.com',
+		tools: [
+			tool('list_models', 'List available models.', 'GET', '/v1/models', []),
+			tool('chat', 'Chat completion.', 'POST', '/v2/chat', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"command-r", "messages":[{"role":"user","content":"hi"}] }' },
+			]),
+		],
+	},
+	huggingface: {
+		baseUrl: 'https://huggingface.co',
+		tools: [
+			tool('whoami', 'Get the authenticated user.', 'GET', '/api/whoami-v2', []),
+			tool('list_models', 'Search models.', 'GET', '/api/models', [
+				{ name: 'search', in: 'query' },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	replicate: {
+		baseUrl: 'https://api.replicate.com/v1',
+		tools: [
+			tool('list_models', 'List public models.', 'GET', '/models', []),
+			tool('get_prediction', 'Get a prediction.', 'GET', '/predictions/{prediction_id}', [
+				{ name: 'prediction_id', in: 'path', required: true },
+			]),
+			tool('create_prediction', 'Run a model.', 'POST', '/predictions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "version":"<model version>", "input":{...} }' },
+			]),
+		],
+	},
+	elevenlabs: {
+		baseUrl: 'https://api.elevenlabs.io',
+		tools: [
+			tool('list_voices', 'List available voices.', 'GET', '/v1/voices', []),
+			tool('get_user', 'Get the user/subscription.', 'GET', '/v1/user', []),
+		],
+	},
+	google_sheets: {
+		baseUrl: 'https://sheets.googleapis.com/v4',
+		tools: [
+			tool('get_spreadsheet', 'Get spreadsheet metadata.', 'GET', '/spreadsheets/{spreadsheetId}', [
+				{ name: 'spreadsheetId', in: 'path', required: true },
+			]),
+			tool('get_values', 'Read a range of cells.', 'GET', '/spreadsheets/{spreadsheetId}/values/{range}', [
+				{ name: 'spreadsheetId', in: 'path', required: true },
+				{ name: 'range', in: 'path', required: true, description: 'e.g. Sheet1!A1:C10' },
+			]),
+		],
+	},
+	gmail: {
+		baseUrl: 'https://gmail.googleapis.com/gmail/v1',
+		tools: [
+			tool('list_messages', 'List/search messages.', 'GET', '/users/me/messages', [
+				{ name: 'q', in: 'query', description: 'Gmail search, e.g. from:foo is:unread' },
+				{ name: 'maxResults', in: 'query', type: 'integer' },
+			]),
+			tool('get_message', 'Get a message by id.', 'GET', '/users/me/messages/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	google_calendar: {
+		baseUrl: 'https://www.googleapis.com/calendar/v3',
+		tools: [
+			tool('list_calendars', 'List calendars.', 'GET', '/users/me/calendarList', []),
+			tool('list_events', 'List events on a calendar.', 'GET', '/calendars/{calendarId}/events', [
+				{ name: 'calendarId', in: 'path', required: true, description: 'e.g. primary' },
+				{ name: 'maxResults', in: 'query', type: 'integer' },
+				{ name: 'timeMin', in: 'query', description: 'RFC3339 lower bound' },
+			]),
+		],
+	},
+	microsoft_graph: {
+		baseUrl: 'https://graph.microsoft.com/v1.0',
+		tools: [
+			tool('me', 'Get the signed-in user.', 'GET', '/me', []),
+			tool('list_messages', 'List Outlook messages.', 'GET', '/me/messages', [{ name: '$top', in: 'query', type: 'integer' }]),
+			tool('list_events', 'List calendar events.', 'GET', '/me/events', [{ name: '$top', in: 'query', type: 'integer' }]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
