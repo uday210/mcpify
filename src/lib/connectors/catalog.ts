@@ -888,6 +888,110 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 		],
 	},
+	// --- AI providers ---
+	groq: {
+		baseUrl: 'https://api.groq.com/openai/v1',
+		tools: [
+			tool('list_models', 'List models.', 'GET', '/models', []),
+			tool('chat', 'Chat completion (OpenAI-compatible).', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"llama-3.3-70b-versatile", "messages":[{"role":"user","content":"hi"}] }' },
+			]),
+		],
+	},
+	mistral: {
+		baseUrl: 'https://api.mistral.ai/v1',
+		tools: [
+			tool('list_models', 'List models.', 'GET', '/models', []),
+			tool('chat', 'Chat completion.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"mistral-small-latest", "messages":[{"role":"user","content":"hi"}] }' },
+			]),
+		],
+	},
+	perplexity: {
+		baseUrl: 'https://api.perplexity.ai',
+		tools: [
+			tool('chat', 'Answer with citations.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"sonar", "messages":[{"role":"user","content":"..."}] }' },
+			]),
+		],
+	},
+	together: {
+		baseUrl: 'https://api.together.xyz/v1',
+		tools: [
+			tool('list_models', 'List models.', 'GET', '/models', []),
+			tool('chat', 'Chat completion.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"...", "messages":[...] }' },
+			]),
+		],
+	},
+	deepl: {
+		baseUrl: 'https://api-free.deepl.com/v2',
+		tools: [
+			tool('usage', 'Check translation usage.', 'GET', '/usage', []),
+			tool('translate', 'Translate text.', 'POST', '/translate', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "text":["Hello"], "target_lang":"DE" }' },
+			]),
+		],
+	},
+	stability: {
+		baseUrl: 'https://api.stability.ai',
+		tools: [tool('list_engines', 'List image engines.', 'GET', '/v1/engines/list', [])],
+	},
+	assemblyai: {
+		baseUrl: 'https://api.assemblyai.com/v2',
+		tools: [
+			tool('list_transcripts', 'List transcripts.', 'GET', '/transcript', []),
+			tool('get_transcript', 'Get a transcript by id.', 'GET', '/transcript/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	// --- Data / places / search ---
+	yelp: {
+		baseUrl: 'https://api.yelp.com/v3',
+		tools: [
+			tool('business_search', 'Search businesses.', 'GET', '/businesses/search', [
+				{ name: 'location', in: 'query', required: true },
+				{ name: 'term', in: 'query', description: 'e.g. coffee' },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('business_details', 'Get a business by id.', 'GET', '/businesses/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	guardian: {
+		baseUrl: 'https://content.guardianapis.com',
+		tools: [
+			tool('search', 'Search Guardian content.', 'GET', '/search', [
+				{ name: 'q', in: 'query', description: 'Search query' },
+				{ name: 'section', in: 'query' },
+			]),
+		],
+	},
+	omdb: {
+		baseUrl: 'https://www.omdbapi.com',
+		tools: [
+			tool('by_title', 'Look up a movie by title.', 'GET', '/', [
+				{ name: 't', in: 'query', required: true, description: 'Movie title' },
+				{ name: 'y', in: 'query', description: 'Year' },
+			]),
+			tool('search', 'Search movies.', 'GET', '/', [{ name: 's', in: 'query', required: true, description: 'Search term' }]),
+		],
+	},
+	ticketmaster: {
+		baseUrl: 'https://app.ticketmaster.com/discovery/v2',
+		tools: [
+			tool('search_events', 'Search events.', 'GET', '/events.json', [
+				{ name: 'keyword', in: 'query' },
+				{ name: 'city', in: 'query' },
+			]),
+			tool('search_venues', 'Search venues.', 'GET', '/venues.json', [{ name: 'keyword', in: 'query' }]),
+		],
+	},
+	hunter: {
+		baseUrl: 'https://api.hunter.io/v2',
+		tools: [
+			tool('domain_search', 'Find emails for a domain.', 'GET', '/domain-search', [{ name: 'domain', in: 'query', required: true }]),
+			tool('email_verifier', 'Verify an email address.', 'GET', '/email-verifier', [{ name: 'email', in: 'query', required: true }]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.

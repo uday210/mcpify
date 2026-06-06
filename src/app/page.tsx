@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Zap, Shield, Boxes, Code2, Gauge, Plug, ArrowRight, Check } from 'lucide-react';
+import ConnectHero from '@/components/ConnectHero';
 
 const APPS = [
 	'github.com', 'stripe.com', 'notion.so', 'slack.com', 'airtable.com', 'hubspot.com',
@@ -71,11 +72,16 @@ export default function Home() {
 							View on GitHub
 						</a>
 					</div>
+
+					{/* Animated orbit: apps connecting to the MCP hub */}
+					<div className="mt-20 flex justify-center">
+						<ConnectHero />
+					</div>
 				</section>
 
 				{/* App logo strip */}
 				<section className="px-6 pb-20 max-w-4xl mx-auto">
-					<p className="text-center text-sm text-slate-500 mb-6">75+ built-in apps — or import any of 2,500+ OpenAPI specs</p>
+					<p className="text-center text-sm text-slate-500 mb-6">98+ built-in apps — or import any of 2,500+ OpenAPI specs</p>
 					<div className="flex flex-wrap justify-center gap-3">
 						{APPS.map((d) => (
 							<div
