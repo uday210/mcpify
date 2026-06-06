@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Server, Plug, Activity, Boxes, Plus, ArrowRight, Home, Settings } from 'lucide-react';
+import { Search, Server, Plug, Activity, Boxes, Plus, ArrowRight, Home, Settings, Sparkles } from 'lucide-react';
 
 interface Item {
 	id: string;
@@ -64,6 +64,7 @@ export default function CommandPalette() {
 			{ id: 'g2', label: 'Connections', icon: Plug, href: '/dashboard/connections', group: 'Go to' },
 			{ id: 'g3', label: 'Activity', icon: Activity, href: '/dashboard/activity', group: 'Go to' },
 			{ id: 'g4', label: 'App Catalog', icon: Boxes, href: '/apps', group: 'Go to' },
+			{ id: 'g6', label: 'Templates', icon: Sparkles, href: '/dashboard/templates', group: 'Go to' },
 			{ id: 'g5', label: 'Settings', icon: Settings, href: '/dashboard/settings', group: 'Go to' },
 		];
 		const srv: Item[] = servers.map((s) => ({

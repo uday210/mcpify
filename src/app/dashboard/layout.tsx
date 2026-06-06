@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Boxes, Server, Plug, Activity, LogOut, Menu, X, Search, Home, Settings } from 'lucide-react';
+import { Boxes, Server, Plug, Activity, LogOut, Menu, X, Search, Home, Settings, Sparkles } from 'lucide-react';
 import Toaster from '@/components/Toaster';
 import CommandPalette from '@/components/CommandPalette';
 
@@ -28,6 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 		{ href: '/dashboard', label: 'Home', icon: Home, exact: true },
 		{ href: '/dashboard/servers', label: 'Servers', icon: Server },
 		{ href: '/dashboard/connections', label: 'Connections', icon: Plug },
+		{ href: '/dashboard/templates', label: 'Templates', icon: Sparkles },
 		{ href: '/dashboard/activity', label: 'Activity', icon: Activity },
 		{ href: '/dashboard/settings', label: 'Settings', icon: Settings },
 	];
