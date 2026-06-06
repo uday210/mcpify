@@ -1000,6 +1000,12 @@ CATALOG.quickbooks_sandbox = {
 	tools: CATALOG.quickbooks.tools,
 };
 
+// FedEx sandbox shares the same tools but the test host.
+CATALOG.fedex_sandbox = {
+	baseUrl: 'https://apis-sandbox.fedex.com',
+	tools: CATALOG.fedex.tools,
+};
+
 export function getCatalogConnector(slug: string): CatalogConnector | null {
 	return CATALOG[slug] || null;
 }
