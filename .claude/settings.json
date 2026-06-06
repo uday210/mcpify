@@ -24,7 +24,8 @@
       "Bash(python3 -c 'import sys,json; d=sys.stdin.read\\(\\); *)",
       "Bash(curl -s -m 20 \"https://api.apis.guru/v2/list.json\" -o /tmp/apisguru.json -w \"http %{http_code}, size %{size_download} bytes\\\\n\")",
       "Bash(python3 -)",
-      "Bash(curl -s -m 40 \"https://api.github.com/repos/PipedreamHQ/pipedream/git/trees/master?recursive=1\" -o pd_tree.json -w \"http %{http_code}, size %{size_download}\\\\n\")"
+      "Bash(curl -s -m 40 \"https://api.github.com/repos/PipedreamHQ/pipedream/git/trees/master?recursive=1\" -o pd_tree.json -w \"http %{http_code}, size %{size_download}\\\\n\")",
+      "Bash(perl -0pi -e \"s/new URL\\\\\\('\\\\/auth\\\\/login', request\\\\.url\\\\\\)/new URL\\('\\\\/auth\\\\/login', appBaseUrl\\(request.url\\)\\)/g; s/new URL\\\\\\('\\\\/dashboard\\\\/connections\\\\?error=not_found', request\\\\.url\\\\\\)/new URL\\('\\\\/dashboard\\\\/connections?error=not_found', appBaseUrl\\(request.url\\)\\)/g; s/new URL\\\\\\('\\\\/dashboard\\\\/connections\\\\?error=oauth_not_configured', request\\\\.url\\\\\\)/new URL\\('\\\\/dashboard\\\\/connections?error=oauth_not_configured', appBaseUrl\\(request.url\\)\\)/g\" \"src/app/api/oauth/[connectionId]/authorize/route.ts\")"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

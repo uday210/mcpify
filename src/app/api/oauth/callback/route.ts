@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 	const stateRaw = url.searchParams.get('state');
 	const providerError = url.searchParams.get('error');
 
-	const connectionsUrl = new URL('/dashboard/connections', request.url);
+	const connectionsUrl = new URL('/dashboard/connections', appBaseUrl(request.url));
 
 	if (providerError) {
 		connectionsUrl.searchParams.set('error', providerError);

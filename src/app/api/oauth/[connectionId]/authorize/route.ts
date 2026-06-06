@@ -19,7 +19,7 @@ export async function GET(
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
-	if (!user) return NextResponse.redirect(new URL('/auth/login', request.url));
+	if (!user) return NextResponse.redirect(new URL('/auth/login', appBaseUrl(request.url)));
 
 	// RLS ensures the user can only read their own connection.
 	const { data: connection } = await supabase
@@ -29,13 +29,13 @@ export async function GET(
 		.maybeSingle();
 
 	if (!connection) {
-		return NextResponse.redirect(new URL('/dashboard/connections?error=not_found', request.url));
+		return NextResponse.redirect(new URL('/dashboard/connections?error=not_found', appBaseUrl(request.url)));
 	}
 
 	const oauth = connection.config?.oauth || {};
 	if (!oauth.authorize_url || !oauth.client_id) {
 		return NextResponse.redirect(
-			new URL('/dashboard/connections?error=oauth_not_configured', request.url)
+			new URL('/dashboard/connections?error=oauth_not_configured', appBaseUrl(request.url))
 		);
 	}
 
