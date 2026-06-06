@@ -675,6 +675,12 @@ export const CATALOG: Record<string, CatalogConnector> = {
 	},
 };
 
+// QuickBooks sandbox shares the same tools but a different API base host.
+CATALOG.quickbooks_sandbox = {
+	baseUrl: 'https://sandbox-quickbooks.api.intuit.com',
+	tools: CATALOG.quickbooks.tools,
+};
+
 export function getCatalogConnector(slug: string): CatalogConnector | null {
 	return CATALOG[slug] || null;
 }

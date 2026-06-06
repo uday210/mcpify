@@ -48,7 +48,8 @@ export async function executeTool(
 			const value = args[name];
 			switch (p.in) {
 				case 'path':
-					path = path.replace(`{${name}}`, encodeURIComponent(String(value)));
+					// Replace every occurrence of the placeholder (some paths repeat it).
+					path = path.split(`{${name}}`).join(encodeURIComponent(String(value)));
 					break;
 				case 'query':
 					query.set(name, typeof value === 'object' ? JSON.stringify(value) : String(value));
