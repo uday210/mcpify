@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { faviconFor } from '@/lib/favicon';
 import { getCatalogConnector } from '@/lib/connectors/catalog';
 import AppIcon from '@/components/AppIcon';
+import ConnectHero from '@/components/ConnectHero';
 
 export const metadata = {
 	title: 'App Catalog — mcpify',
@@ -12,6 +13,9 @@ export const metadata = {
 
 export default async function AppsPage() {
 	const supabase = await createServerSupabaseClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
 	const { data } = await supabase
 		.from('app_definitions')
 		.select('name, slug, description, base_url')
@@ -35,20 +39,35 @@ export default async function AppsPage() {
 						<span className="text-lg font-bold text-slate-900">mcpify</span>
 					</Link>
 					<div className="flex items-center gap-3 text-sm">
-						<Link href="/auth/login" className="text-slate-600 hover:text-slate-900">Sign in</Link>
-						<Link href="/auth/signup" className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
-							Get Started
-						</Link>
+						{user ? (
+							<Link href="/dashboard" className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
+								Go to Dashboard
+							</Link>
+						) : (
+							<>
+								<Link href="/auth/login" className="text-slate-600 hover:text-slate-900">Sign in</Link>
+								<Link href="/auth/signup" className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
+									Get Started
+								</Link>
+							</>
+						)}
 					</div>
 				</div>
 			</header>
 
 			<main className="max-w-6xl mx-auto px-6 py-12">
-				<div className="text-center mb-10">
-					<h1 className="text-4xl font-bold text-slate-900 mb-3">App Catalog</h1>
-					<p className="text-slate-500 max-w-xl mx-auto">
-						{apps.length} apps ready to become MCP servers — or bring any OpenAPI spec. Pick one to see how to connect.
+				<div className="flex flex-col items-center text-center mb-12">
+					<ConnectHero />
+					<h1 className="text-4xl font-bold text-slate-900 mt-6 mb-3">Connect any app as an MCP server</h1>
+					<p className="text-slate-500 max-w-xl">
+						{apps.length} built-in apps ready to go — or import any of 2,500+ OpenAPI specs. Pick one to see how to connect.
 					</p>
+					<Link
+						href={user ? '/dashboard/connections/new' : '/auth/signup'}
+						className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lift transition"
+					>
+						{user ? 'New Connection' : 'Start free'}
+					</Link>
 				</div>
 
 				<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
