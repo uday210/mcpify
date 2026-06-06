@@ -1520,6 +1520,108 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 		],
 	},
+	mailgun: {
+		// Basic auth: username "api", password = your API key.
+		baseUrl: 'https://api.mailgun.net/v3',
+		tools: [
+			tool('list_domains', 'List your sending domains.', 'GET', '/domains', []),
+			tool('get_domain', 'Get a domain.', 'GET', '/domains/{domain}', [{ name: 'domain', in: 'path', required: true }]),
+			tool('domain_events', 'Recent events for a domain.', 'GET', '/{domain}/events', [{ name: 'domain', in: 'path', required: true }]),
+			tool('list_mailing_lists', 'List mailing lists.', 'GET', '/lists/pages', []),
+		],
+	},
+	confluence: {
+		baseUrl: '',
+		tools: [
+			tool('list_spaces', 'List spaces.', 'GET', '/rest/api/space', []),
+			tool('search', 'Search content with CQL.', 'GET', '/rest/api/search', [
+				{ name: 'cql', in: 'query', required: true, description: 'e.g. text ~ "roadmap"' },
+			]),
+			tool('get_content', 'List or filter content.', 'GET', '/rest/api/content', [
+				{ name: 'spaceKey', in: 'query' },
+				{ name: 'title', in: 'query' },
+			]),
+			tool('get_content_by_id', 'Get a page by ID (with body).', 'GET', '/rest/api/content/{id}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'expand', in: 'query', description: 'e.g. body.storage' },
+			]),
+		],
+	},
+	freshdesk: {
+		baseUrl: '',
+		tools: [
+			tool('list_tickets', 'List tickets.', 'GET', '/tickets', []),
+			tool('get_ticket', 'Get a ticket.', 'GET', '/tickets/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_contacts', 'List contacts.', 'GET', '/contacts', []),
+			tool('create_ticket', 'Create a ticket.', 'POST', '/tickets', [
+				{ name: 'body', in: 'body', required: true, description: '{"subject":"Help","description":"...","email":"a@b.com","priority":1,"status":2}' },
+			]),
+		],
+	},
+	freshservice: {
+		baseUrl: '',
+		tools: [
+			tool('list_tickets', 'List tickets.', 'GET', '/tickets', []),
+			tool('get_ticket', 'Get a ticket.', 'GET', '/tickets/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_agents', 'List agents.', 'GET', '/agents', []),
+		],
+	},
+	servicenow: {
+		baseUrl: '',
+		tools: [
+			tool('list_incidents', 'List incidents.', 'GET', '/api/now/table/incident', [
+				{ name: 'sysparm_limit', in: 'query' },
+				{ name: 'sysparm_query', in: 'query', description: 'e.g. active=true' },
+			]),
+			tool('query_table', 'Query any table.', 'GET', '/api/now/table/{table}', [
+				{ name: 'table', in: 'path', required: true, description: 'e.g. incident, change_request' },
+				{ name: 'sysparm_query', in: 'query' },
+			]),
+			tool('get_record', 'Get one record.', 'GET', '/api/now/table/{table}/{sys_id}', [
+				{ name: 'table', in: 'path', required: true },
+				{ name: 'sys_id', in: 'path', required: true },
+			]),
+			tool('create_record', 'Create a record.', 'POST', '/api/now/table/{table}', [
+				{ name: 'table', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"short_description":"..."}' },
+			]),
+		],
+	},
+	woocommerce: {
+		baseUrl: '',
+		tools: [
+			tool('list_products', 'List products.', 'GET', '/products', []),
+			tool('get_product', 'Get a product.', 'GET', '/products/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_orders', 'List orders.', 'GET', '/orders', []),
+			tool('get_order', 'Get an order.', 'GET', '/orders/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	bigcommerce: {
+		baseUrl: '',
+		tools: [
+			tool('list_products', 'List catalog products.', 'GET', '/catalog/products', []),
+			tool('get_product', 'Get a product.', 'GET', '/catalog/products/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_categories', 'List categories.', 'GET', '/catalog/categories', []),
+			tool('list_customers', 'List customers.', 'GET', '/customers', []),
+		],
+	},
+	pinecone: {
+		// Control plane: Api-Key header.
+		baseUrl: 'https://api.pinecone.io',
+		tools: [
+			tool('list_indexes', 'List your indexes.', 'GET', '/indexes', []),
+			tool('describe_index', 'Describe an index.', 'GET', '/indexes/{index_name}', [{ name: 'index_name', in: 'path', required: true }]),
+			tool('list_collections', 'List collections.', 'GET', '/collections', []),
+		],
+	},
+	chargebee: {
+		baseUrl: '',
+		tools: [
+			tool('list_subscriptions', 'List subscriptions.', 'GET', '/subscriptions', []),
+			tool('list_customers', 'List customers.', 'GET', '/customers', []),
+			tool('list_invoices', 'List invoices.', 'GET', '/invoices', []),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
