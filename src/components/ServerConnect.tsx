@@ -13,7 +13,7 @@ interface Props {
 	oauthClientSecret?: string | null;
 }
 
-const CLIENTS = ['Claude', 'Cursor', 'VS Code', 'ChatGPT', 'cURL'] as const;
+const CLIENTS = ['Claude Desktop', 'Claude Code', 'Cursor', 'VS Code', 'ChatGPT', 'cURL'] as const;
 type Client = (typeof CLIENTS)[number];
 
 export default function ServerConnect({
@@ -25,7 +25,7 @@ export default function ServerConnect({
 	oauthClientId,
 	oauthClientSecret,
 }: Props) {
-	const [client, setClient] = useState<Client>('Claude');
+	const [client, setClient] = useState<Client>('Claude Desktop');
 	const type = transport === 'sse' ? 'sse' : 'http';
 	const tokenUrl = `${url}/token`;
 
@@ -47,10 +47,18 @@ export default function ServerConnect({
 ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type: application/json" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`;
 
+	// `claude mcp add` CLI command for Claude Code.
+	const claudeCli = `claude mcp add --transport ${type} ${slug} ${url}${
+		bearer ? ` \\\n  --header "Authorization: Bearer ${bearer}"` : ''
+	}`;
+
 	let bodyEl: { code?: string; steps?: string[]; note?: string };
 	switch (client) {
-		case 'Claude':
+		case 'Claude Desktop':
 			bodyEl = { note: 'Settings → Developer → Edit Config, then restart Claude.', code: mcpServersBlock() };
+			break;
+		case 'Claude Code':
+			bodyEl = { note: 'Run this in your terminal — Claude Code picks it up immediately:', code: claudeCli };
 			break;
 		case 'Cursor':
 			bodyEl = { note: 'Add to ~/.cursor/mcp.json or .cursor/mcp.json.', code: mcpServersBlock() };
