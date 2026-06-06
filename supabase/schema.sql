@@ -1043,3 +1043,18 @@ ON CONFLICT (slug) DO NOTHING;
 -- ============================ ops: rate limits + alerts (migration 020) =====
 ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS rate_limit_per_min INTEGER;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notification_config JSONB DEFAULT '{}'::jsonb;
+
+-- ============================ custom prompts (migration 021) =================
+CREATE TABLE IF NOT EXISTS mcp_prompts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mcp_server_id UUID REFERENCES mcp_servers(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  arguments JSONB NOT NULL DEFAULT '[]'::jsonb,
+  template TEXT NOT NULL DEFAULT '',
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(mcp_server_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_prompts_server ON mcp_prompts(mcp_server_id);
+ALTER TABLE mcp_prompts ENABLE ROW LEVEL SECURITY;

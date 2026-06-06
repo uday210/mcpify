@@ -151,6 +151,41 @@ async function loadConnection(id: string): Promise<any> {
 	return data;
 }
 
+interface CustomPrompt {
+	name: string;
+	description: string | null;
+	arguments: Array<{ name: string; description?: string; required?: boolean }>;
+	template: string;
+}
+
+/** User-authored prompts for a server (empty if the table doesn't exist yet). */
+async function loadCustomPrompts(serverId: string): Promise<CustomPrompt[]> {
+	try {
+		const admin = createAdminClient();
+		const { data, error } = await admin
+			.from('mcp_prompts')
+			.select('name, description, arguments, template')
+			.eq('mcp_server_id', serverId)
+			.eq('enabled', true)
+			.order('name');
+		if (error) return [];
+		return (data as CustomPrompt[]) || [];
+	} catch {
+		return [];
+	}
+}
+
+/** Substitute {{arg}} placeholders in a custom prompt template. */
+function renderCustomPrompt(p: CustomPrompt, args: Record<string, any>) {
+	let text = p.template || '';
+	for (const [k, v] of Object.entries(args)) {
+		text = text.split(`{{${k}}}`).join(String(v ?? ''));
+	}
+	// Drop any unfilled placeholders.
+	text = text.replace(/\{\{\s*[\w-]+\s*\}\}/g, '');
+	return [{ role: 'user', content: { type: 'text', text } }];
+}
+
 /**
  * Handles a single JSON-RPC request against an authenticated MCP server.
  * Returns the response, or null for notifications (which get no reply).
@@ -274,14 +309,27 @@ export async function handleRpc(
 
 			case 'prompts/list': {
 				const tools = await loadTools(server.id);
-				response = rpcResult(id, { prompts: buildPrompts(server, tools) });
+				const custom = await loadCustomPrompts(server.id);
+				const customNames = new Set(custom.map((p) => p.name));
+				const generated = buildPrompts(server, tools).filter((p) => !customNames.has(p.name));
+				const customList = custom.map((p) => ({
+					name: p.name,
+					description: p.description || '',
+					...(Array.isArray(p.arguments) && p.arguments.length ? { arguments: p.arguments } : {}),
+				}));
+				response = rpcResult(id, { prompts: [...customList, ...generated] });
 				break;
 			}
 
 			case 'prompts/get': {
-				const tools = await loadTools(server.id);
 				const name: string = req.params?.name || '';
-				const messages = renderPrompt(name, server, tools, req.params?.arguments || {});
+				const args = req.params?.arguments || {};
+				const custom = (await loadCustomPrompts(server.id)).find((p) => p.name === name);
+				let messages = custom ? renderCustomPrompt(custom, args) : null;
+				if (!messages) {
+					const tools = await loadTools(server.id);
+					messages = renderPrompt(name, server, tools, args);
+				}
 				if (!messages) {
 					statusCode = 400;
 					response = rpcError(id, INVALID_PARAMS, `Unknown prompt: ${name}`);
