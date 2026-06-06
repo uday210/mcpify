@@ -127,7 +127,7 @@ export default function ActivityPage() {
 						<Stat
 							label="Success rate"
 							value={`${stats.successRate}%`}
-							tone={stats.successRate >= 95 ? 'good' : stats.successRate >= 80 ? 'default' : 'bad'}
+							tone={stats.successRate >= 95 ? 'good' : 'default'}
 							icon={CheckCircle2}
 						/>
 						<Stat label="Errors" value={stats.errors} tone={stats.errors ? 'bad' : 'good'} icon={AlertTriangle} />
