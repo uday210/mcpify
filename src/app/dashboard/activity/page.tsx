@@ -14,6 +14,7 @@ import {
 	Radio,
 } from 'lucide-react';
 import { Stat, CallsBarChart, CallsTable, timeAgo } from '@/components/monitor';
+import { getPrefs } from '@/lib/preferences';
 
 type StatusFilter = 'all' | 'success' | 'errors';
 
@@ -45,7 +46,8 @@ export default function ActivityPage() {
 
 	useEffect(() => {
 		if (!auto) return;
-		const t = setInterval(load, 5000);
+		const ms = getPrefs().activityRefreshMs || 5000;
+		const t = setInterval(load, ms);
 		return () => clearInterval(t);
 	}, [auto]);
 

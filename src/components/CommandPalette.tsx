@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Server, Plug, Activity, Boxes, Plus, ArrowRight } from 'lucide-react';
+import { Search, Server, Plug, Activity, Boxes, Plus, ArrowRight, Home, Settings } from 'lucide-react';
 
 interface Item {
 	id: string;
@@ -59,10 +59,12 @@ export default function CommandPalette() {
 		const nav: Item[] = [
 			{ id: 'n1', label: 'New Server', icon: Plus, href: '/dashboard/servers/new', group: 'Actions' },
 			{ id: 'n2', label: 'New Connection', icon: Plus, href: '/dashboard/connections/new', group: 'Actions' },
-			{ id: 'g1', label: 'Servers', icon: Server, href: '/dashboard', group: 'Go to' },
+			{ id: 'g0', label: 'Home', icon: Home, href: '/dashboard', group: 'Go to' },
+			{ id: 'g1', label: 'Servers', icon: Server, href: '/dashboard/servers', group: 'Go to' },
 			{ id: 'g2', label: 'Connections', icon: Plug, href: '/dashboard/connections', group: 'Go to' },
 			{ id: 'g3', label: 'Activity', icon: Activity, href: '/dashboard/activity', group: 'Go to' },
 			{ id: 'g4', label: 'App Catalog', icon: Boxes, href: '/apps', group: 'Go to' },
+			{ id: 'g5', label: 'Settings', icon: Settings, href: '/dashboard/settings', group: 'Go to' },
 		];
 		const srv: Item[] = servers.map((s) => ({
 			id: `s-${s.id}`,

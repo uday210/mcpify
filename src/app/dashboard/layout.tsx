@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Boxes, Server, Plug, Activity, LogOut, Menu, X, Search } from 'lucide-react';
+import { Boxes, Server, Plug, Activity, LogOut, Menu, X, Search, Home, Settings } from 'lucide-react';
 import Toaster from '@/components/Toaster';
 import CommandPalette from '@/components/CommandPalette';
 
@@ -25,9 +25,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 	};
 
 	const nav = [
-		{ href: '/dashboard', label: 'Servers', icon: Server, exact: true },
+		{ href: '/dashboard', label: 'Home', icon: Home, exact: true },
+		{ href: '/dashboard/servers', label: 'Servers', icon: Server },
 		{ href: '/dashboard/connections', label: 'Connections', icon: Plug },
 		{ href: '/dashboard/activity', label: 'Activity', icon: Activity },
+		{ href: '/dashboard/settings', label: 'Settings', icon: Settings },
 	];
 
 	const isActive = (href: string, exact?: boolean) =>

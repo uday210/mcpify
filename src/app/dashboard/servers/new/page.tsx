@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Check, Server } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import AppIcon from '@/components/AppIcon';
+import { getPrefs } from '@/lib/preferences';
 
 interface Connection {
 	id: string;
@@ -28,6 +29,11 @@ export default function NewServerPage() {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [name, setName] = useState('');
 	const [transport, setTransport] = useState('http_stream');
+
+	// Apply the user's saved default transport on mount.
+	useEffect(() => {
+		setTransport(getPrefs().defaultTransport);
+	}, []);
 	const [authMode, setAuthMode] = useState<'api_key' | 'oauth' | 'none'>('api_key');
 	const [mode, setMode] = useState<'single' | 'aggregate'>('single');
 	const [submitting, setSubmitting] = useState(false);

@@ -39,7 +39,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://zoom.us/oauth/token)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://api.zoom.us/v2/users/me)",
       "Bash(node scripts/seed-telegram-zoom.mjs)",
-      "Bash(echo \"pushed: $?\")"
+      "Bash(echo \"pushed: $?\")",
+      "Bash(sed -n '1,60p' src/app/page.tsx)",
+      "Bash(sed -n '1,40p' src/app/dashboard/page.tsx)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
