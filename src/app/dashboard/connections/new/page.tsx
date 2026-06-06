@@ -530,29 +530,46 @@ export default function NewConnectionPage() {
 				)}
 
 				{/* Auth credential fields */}
+				{authType !== 'none' && authType !== 'oauth' && authType !== 'oauth2_cc' && (
+					<div className="pt-1">
+						<div className="text-sm font-semibold text-slate-700 mb-1">Credentials</div>
+						{connectorType === 'catalog' && selectedApp?.auth_help && (
+							<p className="text-xs text-slate-500 mb-3">{selectedApp.auth_help}</p>
+						)}
+					</div>
+				)}
+
 				{authType === 'api_key' && (
-					<div className="grid grid-cols-3 gap-3">
-						<div>
-							<label className={labelCls}>Send in</label>
-							<select className={input} value={apiKeyIn} onChange={(e) => setApiKeyIn(e.target.value)}>
-								<option value="header">Header</option>
-								<option value="query">Query</option>
-							</select>
-						</div>
-						<div>
-							<label className={labelCls}>Param name</label>
-							<input className={input} value={apiKeyName} onChange={(e) => setApiKeyName(e.target.value)} />
-						</div>
+					connectorType === 'catalog' ? (
 						<div>
 							<label className={labelCls}>API key</label>
-							<input className={input} value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="••••••" />
+							<input className={input} type="password" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="Paste your key" />
+							<p className="text-xs text-slate-400 mt-1">Sent automatically as this app requires — you only need the key.</p>
 						</div>
-					</div>
+					) : (
+						<div className="grid grid-cols-3 gap-3">
+							<div>
+								<label className={labelCls}>Send in</label>
+								<select className={input} value={apiKeyIn} onChange={(e) => setApiKeyIn(e.target.value)}>
+									<option value="header">Header</option>
+									<option value="query">Query</option>
+								</select>
+							</div>
+							<div>
+								<label className={labelCls}>Param name</label>
+								<input className={input} value={apiKeyName} onChange={(e) => setApiKeyName(e.target.value)} />
+							</div>
+							<div>
+								<label className={labelCls}>API key</label>
+								<input className={input} type="password" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="••••••" />
+							</div>
+						</div>
+					)
 				)}
 				{authType === 'bearer' && (
 					<div>
-						<label className={labelCls}>Bearer token</label>
-						<input className={input} value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="ghp_... / sk_..." />
+						<label className={labelCls}>Bearer token / API key</label>
+						<input className={input} type="password" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="Paste your token" />
 					</div>
 				)}
 				{authType === 'basic' && (
@@ -568,16 +585,23 @@ export default function NewConnectionPage() {
 					</div>
 				)}
 				{authType === 'custom' && (
-					<div className="grid grid-cols-2 gap-3">
+					connectorType === 'catalog' ? (
 						<div>
-							<label className={labelCls}>Header name</label>
-							<input className={input} value={headerName} onChange={(e) => setHeaderName(e.target.value)} />
+							<label className={labelCls}>API key / token</label>
+							<input className={input} type="password" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} placeholder="Paste the value exactly as shown above" />
 						</div>
-						<div>
-							<label className={labelCls}>Header value</label>
-							<input className={input} value={keyValue} onChange={(e) => setKeyValue(e.target.value)} />
+					) : (
+						<div className="grid grid-cols-2 gap-3">
+							<div>
+								<label className={labelCls}>Header name</label>
+								<input className={input} value={headerName} onChange={(e) => setHeaderName(e.target.value)} />
+							</div>
+							<div>
+								<label className={labelCls}>Header value</label>
+								<input className={input} value={keyValue} onChange={(e) => setKeyValue(e.target.value)} />
+							</div>
 						</div>
-					</div>
+					)
 				)}
 				{authType === 'oauth' && (
 					<div className="space-y-3">
