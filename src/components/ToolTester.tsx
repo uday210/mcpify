@@ -32,7 +32,21 @@ export default function ToolTester({ serverId, tools }: { serverId: string; tool
 
 	const selectTool = (n: string) => {
 		setToolName(n);
-		setValues({});
+		// Pre-fill object/array params with their example payload (if the
+		// description is valid JSON) so users edit a template, not free-text.
+		const t = enabled.find((x) => x.name === n);
+		const init: Record<string, any> = {};
+		for (const [name, schema] of Object.entries<any>(t?.input_schema?.properties || {})) {
+			if ((schema.type === 'object' || schema.type === 'array') && schema.description) {
+				try {
+					JSON.parse(schema.description);
+					init[name] = schema.description;
+				} catch {
+					/* not JSON — leave blank */
+				}
+			}
+		}
+		setValues(init);
 		setResult(null);
 	};
 
@@ -55,7 +69,7 @@ export default function ToolTester({ serverId, tools }: { serverId: string; tool
 				try {
 					args[name] = JSON.parse(v);
 				} catch {
-					args[name] = v;
+					throw new Error(`"${name}" must be valid JSON (e.g. ${schema.description || '{ ... }'})`);
 				}
 			} else args[name] = v;
 		}
@@ -193,16 +207,25 @@ export default function ToolTester({ serverId, tools }: { serverId: string; tool
 													</option>
 												))}
 											</select>
+										) : type === 'object' || type === 'array' ? (
+											<textarea
+												className={`${inputCls} font-mono text-xs h-28`}
+												value={values[name] ?? ''}
+												onChange={(e) => setValues((v) => ({ ...v, [name]: e.target.value }))}
+												placeholder={schema.description || '{ ... }  (JSON)'}
+											/>
 										) : (
 											<input
 												className={inputCls}
 												type={type === 'integer' || type === 'number' ? 'number' : 'text'}
 												value={values[name] ?? ''}
 												onChange={(e) => setValues((v) => ({ ...v, [name]: e.target.value }))}
-												placeholder={schema.description || (type === 'array' || type === 'object' ? 'JSON' : '')}
+												placeholder={schema.description || ''}
 											/>
 										)}
-										{schema.description && <p className="text-xs text-slate-400 mt-1">{schema.description}</p>}
+										{schema.description && type !== 'object' && type !== 'array' && (
+											<p className="text-xs text-slate-400 mt-1">{schema.description}</p>
+										)}
 									</div>
 								);
 							})}
