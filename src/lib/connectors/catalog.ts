@@ -793,6 +793,101 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_events', 'List calendar events.', 'GET', '/me/events', [{ name: '$top', in: 'query', type: 'integer' }]),
 		],
 	},
+	spotify: {
+		baseUrl: 'https://api.spotify.com/v1',
+		tools: [
+			tool('get_me', 'Get the current user profile.', 'GET', '/me', []),
+			tool('search', 'Search Spotify.', 'GET', '/search', [
+				{ name: 'q', in: 'query', required: true },
+				{ name: 'type', in: 'query', required: true, description: 'track, artist, album, playlist' },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('my_playlists', 'List the current user’s playlists.', 'GET', '/me/playlists', [{ name: 'limit', in: 'query', type: 'integer' }]),
+		],
+	},
+	typeform: {
+		baseUrl: 'https://api.typeform.com',
+		tools: [
+			tool('list_forms', 'List your forms.', 'GET', '/forms', [{ name: 'page_size', in: 'query', type: 'integer' }]),
+			tool('get_responses', 'Get a form’s responses.', 'GET', '/forms/{form_id}/responses', [
+				{ name: 'form_id', in: 'path', required: true },
+				{ name: 'page_size', in: 'query', type: 'integer' },
+			]),
+		],
+	},
+	coda: {
+		baseUrl: 'https://coda.io/apis/v1',
+		tools: [
+			tool('list_docs', 'List your docs.', 'GET', '/docs', []),
+			tool('list_tables', 'List tables in a doc.', 'GET', '/docs/{docId}/tables', [{ name: 'docId', in: 'path', required: true }]),
+		],
+	},
+	contentful: {
+		baseUrl: 'https://api.contentful.com',
+		tools: [
+			tool('list_spaces', 'List spaces.', 'GET', '/spaces', []),
+			tool('list_entries', 'List entries in a space.', 'GET', '/spaces/{space_id}/environments/master/entries', [
+				{ name: 'space_id', in: 'path', required: true },
+			]),
+		],
+	},
+	storyblok: {
+		baseUrl: 'https://api.storyblok.com/v2/cdn',
+		tools: [
+			tool('get_stories', 'List stories.', 'GET', '/stories', [{ name: 'per_page', in: 'query', type: 'integer' }]),
+			tool('get_story', 'Get a story by slug.', 'GET', '/stories/{slug}', [{ name: 'slug', in: 'path', required: true }]),
+		],
+	},
+	helpscout: {
+		baseUrl: 'https://api.helpscout.net/v2',
+		tools: [
+			tool('list_mailboxes', 'List mailboxes.', 'GET', '/mailboxes', []),
+			tool('list_conversations', 'List conversations.', 'GET', '/conversations', [{ name: 'status', in: 'query', description: 'active, closed, …' }]),
+		],
+	},
+	pagerduty: {
+		baseUrl: 'https://api.pagerduty.com',
+		tools: [
+			tool('list_incidents', 'List incidents.', 'GET', '/incidents', [{ name: 'statuses[]', in: 'query', description: 'triggered, acknowledged, resolved' }]),
+			tool('list_services', 'List services.', 'GET', '/services', [{ name: 'limit', in: 'query', type: 'integer' }]),
+		],
+	},
+	opsgenie: {
+		baseUrl: 'https://api.opsgenie.com',
+		tools: [
+			tool('list_alerts', 'List alerts.', 'GET', '/v2/alerts', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_alert', 'Get an alert by id.', 'GET', '/v2/alerts/{id}', [{ name: 'id', in: 'path', required: true }]),
+		],
+	},
+	render: {
+		baseUrl: 'https://api.render.com/v1',
+		tools: [
+			tool('list_services', 'List your services.', 'GET', '/services', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_deploys', 'List a service’s deploys.', 'GET', '/services/{serviceId}/deploys', [{ name: 'serviceId', in: 'path', required: true }]),
+		],
+	},
+	lemonsqueezy: {
+		baseUrl: 'https://api.lemonsqueezy.com/v1',
+		tools: [
+			tool('list_products', 'List products.', 'GET', '/products', []),
+			tool('list_orders', 'List orders.', 'GET', '/orders', []),
+		],
+	},
+	plausible: {
+		baseUrl: 'https://plausible.io/api',
+		tools: [
+			tool('aggregate', 'Aggregate stats for a site.', 'GET', '/v1/stats/aggregate', [
+				{ name: 'site_id', in: 'query', required: true, description: 'your domain' },
+				{ name: 'metrics', in: 'query', description: 'e.g. visitors,pageviews' },
+				{ name: 'period', in: 'query', description: 'e.g. 7d, 30d, month' },
+			]),
+			tool('timeseries', 'Stats over time.', 'GET', '/v1/stats/timeseries', [
+				{ name: 'site_id', in: 'query', required: true },
+				{ name: 'metrics', in: 'query' },
+				{ name: 'period', in: 'query' },
+			]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.
