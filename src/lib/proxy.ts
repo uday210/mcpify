@@ -233,7 +233,9 @@ async function getClientCredentialsToken(connection: any): Promise<string | null
 	if (cached && cached.exp - Date.now() > 60_000) return cached.token;
 
 	const oauth = (connection.config || {}).oauth || {};
-	if (!oauth.token_url || !oauth.client_id) return null;
+	if (!oauth.token_url || !oauth.client_id) {
+		throw new Error('OAuth2 client-credentials not configured (missing token URL or client ID).');
+	}
 	const clientSecret = oauth.client_secret ? safeDecrypt(oauth.client_secret).value : '';
 
 	const params = new URLSearchParams({
@@ -248,9 +250,17 @@ async function getClientCredentialsToken(connection: any): Promise<string | null
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
 		body: params.toString(),
 	});
-	if (!resp.ok) return null;
-	const tok = await resp.json();
-	if (!tok.access_token) return null;
+	const text = await resp.text();
+	if (!resp.ok) {
+		throw new Error(`OAuth token request failed (HTTP ${resp.status}). Check your client ID/secret. ${text.slice(0, 200)}`);
+	}
+	let tok: any = {};
+	try {
+		tok = JSON.parse(text);
+	} catch {
+		/* ignore */
+	}
+	if (!tok.access_token) throw new Error('OAuth token response had no access_token.');
 	ccTokenCache.set(connection.id, {
 		token: tok.access_token,
 		exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000,
