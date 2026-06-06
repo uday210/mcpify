@@ -68,7 +68,7 @@ export default function ServerDetailPage() {
 			await fetch(`/api/servers/${id}/tools`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tools: tools.map((t) => ({ id: t.id, enabled: t.enabled, name: t.name })) }),
+				body: JSON.stringify({ tools: tools.map((t) => ({ id: t.id, enabled: t.enabled, name: t.name, description: t.description })) }),
 			});
 			setToolsDirty(false);
 			loadTools();
@@ -319,32 +319,41 @@ export default function ServerDetailPage() {
 						</button>
 					)}
 				</div>
-				<p className="text-xs text-slate-400 mb-3">Toggle tools on/off or rename them. Disabled tools aren’t exposed to clients.</p>
+				<p className="text-xs text-slate-400 mb-3">
+					Toggle tools on/off, rename them, and edit their descriptions. A clear description helps the LLM pick the right
+					tool. Disabled tools aren’t exposed to clients.
+				</p>
 				<div className="divide-y">
 					{tools.map((t: any) => (
-						<div key={t.id} className="py-2.5 flex items-center gap-3">
-							<button
-								onClick={() => patchTool(t.id, { enabled: !t.enabled })}
-								className={`relative w-9 h-5 rounded-full transition shrink-0 ${t.enabled ? 'bg-cyan-500' : 'bg-slate-300'}`}
-								title={t.enabled ? 'Enabled' : 'Disabled'}
-							>
-								<span
-									className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${t.enabled ? 'translate-x-4' : ''}`}
+						<div key={t.id} className="py-3">
+							<div className="flex items-center gap-3">
+								<button
+									onClick={() => patchTool(t.id, { enabled: !t.enabled })}
+									className={`relative w-9 h-5 rounded-full transition shrink-0 ${t.enabled ? 'bg-cyan-500' : 'bg-slate-300'}`}
+									title={t.enabled ? 'Enabled' : 'Disabled'}
+								>
+									<span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${t.enabled ? 'translate-x-4' : ''}`} />
+								</button>
+								<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center shrink-0">
+									{t.http_method}
+								</span>
+								<input
+									value={t.name}
+									onChange={(e) => patchTool(t.id, { name: e.target.value })}
+									className={`text-sm font-mono bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 flex-1 min-w-0 ${
+										t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
+									}`}
 								/>
-							</button>
-							<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center shrink-0">
-								{t.http_method}
-							</span>
+								<span className="text-[11px] font-mono text-slate-400 truncate hidden md:block max-w-[30%]" title={t.path_template}>
+									{t.path_template}
+								</span>
+							</div>
 							<input
-								value={t.name}
-								onChange={(e) => patchTool(t.id, { name: e.target.value })}
-								className={`text-sm font-mono bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 flex-1 min-w-0 ${
-									t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
-								}`}
+								value={t.description || ''}
+								onChange={(e) => patchTool(t.id, { description: e.target.value })}
+								placeholder="Describe what this tool does (shown to the LLM)…"
+								className="mt-1.5 ml-[3.25rem] w-[calc(100%-3.25rem)] text-xs text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 py-0.5"
 							/>
-							<span className="text-xs text-slate-400 truncate hidden sm:block max-w-[40%]">
-								{t.description || t.path_template}
-							</span>
 						</div>
 					))}
 					{tools.length === 0 && <p className="text-sm text-slate-400 py-2">No tools.</p>}
