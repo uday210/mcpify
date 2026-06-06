@@ -75,5 +75,5 @@ export async function GET(request: NextRequest) {
 			.map((a) => ({ slug: `pd:${a.slug}`, name: a.name, source: 'directory' as const }));
 	}
 
-	return NextResponse.json({ curated, external, directory });
+	return NextResponse.json({ curated, external, directory, total: (defs || []).length });
 }

@@ -47,6 +47,7 @@ export default function NewConnectionPage() {
 	const [apps, setApps] = useState<CatalogApp[]>([]);
 	const [externalApps, setExternalApps] = useState<any[]>([]);
 	const [directoryApps, setDirectoryApps] = useState<any[]>([]);
+	const [totalApps, setTotalApps] = useState(0);
 	const [searching, setSearching] = useState(false);
 	const [appSlug, setAppSlug] = useState('');
 	const [name, setName] = useState('');
@@ -88,6 +89,7 @@ export default function NewConnectionPage() {
 						setApps(list);
 						setExternalApps(d.external || []);
 						setDirectoryApps(d.directory || []);
+						if (typeof d.total === 'number') setTotalApps(d.total);
 						if (!preselectDone.current) {
 							preselectDone.current = true;
 							const want = new URLSearchParams(window.location.search).get('app');
@@ -273,7 +275,7 @@ export default function NewConnectionPage() {
 						<Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
 						<input
 							className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-300 rounded-2xl text-base shadow-card focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
-							placeholder="Search 98 built-in apps, or 2,500+ OpenAPI APIs…"
+							placeholder={`Search ${totalApps || ''} built-in apps, or 2,500+ OpenAPI APIs…`}
 							value={catalogQuery}
 							onChange={(e) => setCatalogQuery(e.target.value)}
 							autoFocus

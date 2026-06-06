@@ -21,7 +21,7 @@ export default function BrandPanel() {
 					Turn any cloud app into an <span className="text-gradient">MCP server</span>.
 				</h2>
 				<ul className="space-y-2.5 text-slate-300">
-					{['98+ built-in apps, plus 2,500+ via OpenAPI', 'SSE & Streamable HTTP, auth handled', 'Live monitoring built in'].map((t) => (
+					{['100+ built-in apps, plus 2,500+ via OpenAPI', 'SSE & Streamable HTTP, auth handled', 'Live monitoring built in'].map((t) => (
 						<li key={t} className="flex items-center gap-2">
 							<Check className="w-4 h-4 text-cyan-400" /> {t}
 						</li>

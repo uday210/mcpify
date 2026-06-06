@@ -32,7 +32,9 @@
       "Bash(curl -s -m 15 -o /dev/null -w \"catalog/search %{http_code}\\\\n\" \"https://mcpify-production.up.railway.app/api/catalog/search?q=git\")",
       "Bash(python3 -c ' *)",
       "Bash(git fetch *)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Bash(perl -0pi -e 's/98\\\\+ built-in apps — or import any of 2,500\\\\+ OpenAPI specs/100+ built-in apps — or import any of 2,500+ OpenAPI specs/' src/app/page.tsx)",
+      "Bash(perl -0pi -e 's/98\\\\+ built-in apps, plus 2,500\\\\+ via OpenAPI/100+ built-in apps, plus 2,500+ via OpenAPI/' src/components/BrandPanel.tsx)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"

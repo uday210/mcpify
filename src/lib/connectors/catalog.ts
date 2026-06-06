@@ -1095,6 +1095,10 @@ CATALOG.fedex_sandbox = {
 	tools: CATALOG.fedex.tools,
 };
 
+// PayPal & Square sandboxes use distinct test hosts.
+CATALOG.paypal_sandbox = { baseUrl: 'https://api-m.sandbox.paypal.com', tools: CATALOG.paypal.tools };
+CATALOG.square_sandbox = { baseUrl: 'https://connect.squareupsandbox.com', tools: CATALOG.square.tools };
+
 export function getCatalogConnector(slug: string): CatalogConnector | null {
 	return CATALOG[slug] || null;
 }
