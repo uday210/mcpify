@@ -838,6 +838,15 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'vs_currency', in: 'query', required: true, description: 'e.g. usd' },
 				{ name: 'per_page', in: 'query', type: 'integer' },
 			]),
+			tool('list_coins', 'List all supported coins (id/symbol/name).', 'GET', '/coins/list', []),
+			tool('get_coin', 'Detailed data for a coin.', 'GET', '/coins/{id}', [{ name: 'id', in: 'path', required: true, description: 'e.g. bitcoin' }]),
+			tool('market_chart', 'Historical market chart.', 'GET', '/coins/{id}/market_chart', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'vs_currency', in: 'query', required: true },
+				{ name: 'days', in: 'query', required: true, description: 'e.g. 1, 7, 30, max' },
+			]),
+			tool('trending', 'Trending coins.', 'GET', '/search/trending', []),
+			tool('search', 'Search coins, categories, markets.', 'GET', '/search', [{ name: 'query', in: 'query', required: true }]),
 		],
 	},
 	openmeteo: {
@@ -949,6 +958,18 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('quote', 'Real-time stock quote.', 'GET', '/quote', [{ name: 'symbol', in: 'query', required: true }]),
 			tool('company_profile', 'Company profile.', 'GET', '/stock/profile2', [{ name: 'symbol', in: 'query', required: true }]),
+			tool('symbol_search', 'Search symbols.', 'GET', '/search', [{ name: 'q', in: 'query', required: true }]),
+			tool('company_news', 'Company news in a date range.', 'GET', '/company-news', [
+				{ name: 'symbol', in: 'query', required: true },
+				{ name: 'from', in: 'query', required: true, description: 'YYYY-MM-DD' },
+				{ name: 'to', in: 'query', required: true, description: 'YYYY-MM-DD' },
+			]),
+			tool('market_news', 'General market news.', 'GET', '/news', [{ name: 'category', in: 'query', description: 'general, forex, crypto, merger' }]),
+			tool('basic_financials', 'Key metrics for a company.', 'GET', '/stock/metric', [
+				{ name: 'symbol', in: 'query', required: true },
+				{ name: 'metric', in: 'query', description: 'all' },
+			]),
+			tool('recommendation', 'Analyst recommendations.', 'GET', '/stock/recommendation', [{ name: 'symbol', in: 'query', required: true }]),
 		],
 	},
 	weatherapi: {
@@ -1119,6 +1140,12 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('chat', 'Chat completion.', 'POST', '/v2/chat', [
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"command-r", "messages":[{"role":"user","content":"hi"}] }' },
 			]),
+			tool('embed', 'Create embeddings.', 'POST', '/v2/embed', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"embed-english-v3.0","texts":["hi"],"input_type":"search_document"}' },
+			]),
+			tool('rerank', 'Rerank documents for a query.', 'POST', '/v2/rerank', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"rerank-v3.5","query":"q","documents":["a","b"]}' },
+			]),
 		],
 	},
 	huggingface: {
@@ -1147,6 +1174,14 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://api.elevenlabs.io',
 		tools: [
 			tool('list_voices', 'List available voices.', 'GET', '/v1/voices', []),
+			tool('get_voice', 'Get a voice.', 'GET', '/v1/voices/{voice_id}', [{ name: 'voice_id', in: 'path', required: true }]),
+			tool('list_models', 'List TTS models.', 'GET', '/v1/models', []),
+			tool('text_to_speech', 'Synthesize speech (returns audio).', 'POST', '/v1/text-to-speech/{voice_id}', [
+				{ name: 'voice_id', in: 'path', required: true },
+				{ name: 'text', in: 'body', required: true },
+				{ name: 'model_id', in: 'body', description: 'e.g. eleven_multilingual_v2' },
+			]),
+			tool('list_history', 'List generated audio history.', 'GET', '/v1/history', []),
 			tool('get_user', 'Get the user/subscription.', 'GET', '/v1/user', []),
 		],
 	},
@@ -1373,6 +1408,9 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('chat', 'Chat completion.', 'POST', '/chat/completions', [
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"mistral-small-latest", "messages":[{"role":"user","content":"hi"}] }' },
 			]),
+			tool('embeddings', 'Create embeddings.', 'POST', '/embeddings', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"mistral-embed","input":["hello"]}' },
+			]),
 		],
 	},
 	perplexity: {
@@ -1390,6 +1428,12 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('chat', 'Chat completion.', 'POST', '/chat/completions', [
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "model":"...", "messages":[...] }' },
 			]),
+			tool('embeddings', 'Create embeddings.', 'POST', '/embeddings', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"BAAI/bge-base-en-v1.5","input":"hello"}' },
+			]),
+			tool('create_image', 'Generate an image.', 'POST', '/images/generations', [
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"model":"black-forest-labs/FLUX.1-schnell","prompt":"a cat"}' },
+			]),
 		],
 	},
 	deepl: {
@@ -1399,17 +1443,30 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('translate', 'Translate text.', 'POST', '/translate', [
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "text":["Hello"], "target_lang":"DE" }' },
 			]),
+			tool('languages', 'List supported languages.', 'GET', '/languages', [{ name: 'type', in: 'query', description: 'source or target' }]),
 		],
 	},
 	stability: {
 		baseUrl: 'https://api.stability.ai',
-		tools: [tool('list_engines', 'List image engines.', 'GET', '/v1/engines/list', [])],
+		tools: [
+			tool('list_engines', 'List image engines.', 'GET', '/v1/engines/list', []),
+			tool('account', 'Get account details.', 'GET', '/v1/user/account', []),
+			tool('balance', 'Get credit balance.', 'GET', '/v1/user/balance', []),
+		],
 	},
 	assemblyai: {
 		baseUrl: 'https://api.assemblyai.com/v2',
 		tools: [
 			tool('list_transcripts', 'List transcripts.', 'GET', '/transcript', []),
 			tool('get_transcript', 'Get a transcript by id.', 'GET', '/transcript/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('submit_transcript', 'Transcribe an audio URL.', 'POST', '/transcript', [
+				{ name: 'audio_url', in: 'body', required: true, description: 'Public URL of the audio file' },
+				{ name: 'speaker_labels', in: 'body', type: 'boolean' },
+			]),
+			tool('get_subtitles', 'Get SRT/VTT subtitles.', 'GET', '/transcript/{id}/{format}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'format', in: 'path', required: true, description: 'srt or vtt' },
+			]),
 		],
 	},
 	// --- Data / places / search ---
@@ -1620,6 +1677,22 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'limit', in: 'query', type: 'integer' },
 			]),
 			tool('ticker_details', 'Ticker details.', 'GET', '/v3/reference/tickers/{ticker}', [{ name: 'ticker', in: 'path', required: true }]),
+			tool('prev_close', 'Previous day’s OHLC.', 'GET', '/v2/aggs/ticker/{ticker}/prev', [{ name: 'ticker', in: 'path', required: true }]),
+			tool('aggregates', 'Aggregate bars over a date range.', 'GET', '/v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}', [
+				{ name: 'ticker', in: 'path', required: true },
+				{ name: 'multiplier', in: 'path', required: true, description: 'e.g. 1' },
+				{ name: 'timespan', in: 'path', required: true, description: 'minute, hour, day, week…' },
+				{ name: 'from', in: 'path', required: true, description: 'YYYY-MM-DD' },
+				{ name: 'to', in: 'path', required: true, description: 'YYYY-MM-DD' },
+			]),
+			tool('daily_open_close', 'Open/close for a date.', 'GET', '/v1/open-close/{ticker}/{date}', [
+				{ name: 'ticker', in: 'path', required: true },
+				{ name: 'date', in: 'path', required: true, description: 'YYYY-MM-DD' },
+			]),
+			tool('ticker_news', 'Recent news for tickers.', 'GET', '/v2/reference/news', [
+				{ name: 'ticker', in: 'query' },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
 		],
 	},
 	newsdata: {
@@ -1747,8 +1820,17 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 		tools: [
 			tool('list_models', 'List Gemini models.', 'GET', '/models', []),
+			tool('get_model', 'Get a model’s details.', 'GET', '/models/{model}', [{ name: 'model', in: 'path', required: true }]),
 			tool('generate_content', 'Generate content with a model.', 'POST', '/models/{model}:generateContent', [
 				{ name: 'model', in: 'path', required: true, description: 'e.g. gemini-1.5-flash' },
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"contents":[{"parts":[{"text":"Hello"}]}]}' },
+			]),
+			tool('embed_content', 'Create an embedding.', 'POST', '/models/{model}:embedContent', [
+				{ name: 'model', in: 'path', required: true, description: 'e.g. text-embedding-004' },
+				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"content":{"parts":[{"text":"hello"}]}}' },
+			]),
+			tool('count_tokens', 'Count tokens for a request.', 'POST', '/models/{model}:countTokens', [
+				{ name: 'model', in: 'path', required: true },
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{"contents":[{"parts":[{"text":"Hello"}]}]}' },
 			]),
 		],
@@ -1764,7 +1846,15 @@ export const CATALOG: Record<string, CatalogConnector> = {
 	},
 	deepgram: {
 		baseUrl: 'https://api.deepgram.com/v1',
-		tools: [tool('list_projects', 'List projects.', 'GET', '/projects', [])],
+		tools: [
+			tool('list_projects', 'List projects.', 'GET', '/projects', []),
+			tool('transcribe_url', 'Transcribe audio from a URL.', 'POST', '/listen', [
+				{ name: 'model', in: 'query', description: 'e.g. nova-2' },
+				{ name: 'url', in: 'body', required: true, description: 'Public audio URL' },
+			]),
+			tool('list_models', 'List available models.', 'GET', '/models', []),
+			tool('get_balances', 'Get project balances.', 'GET', '/projects/{project_id}/balances', [{ name: 'project_id', in: 'path', required: true }]),
+		],
 	},
 	smartsheet: {
 		baseUrl: 'https://api.smartsheet.com/2.0',
