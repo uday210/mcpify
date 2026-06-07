@@ -132,17 +132,44 @@ interface ToolRow {
 	path_template: string;
 	param_map: Array<Record<string, any>>;
 	app_connection_id: string | null;
+	requires_approval?: boolean;
 }
 
 async function loadTools(serverId: string): Promise<ToolRow[]> {
 	const admin = createAdminClient();
+	// select('*') keeps this resilient to optional columns (requires_approval)
+	// that may not exist until migration 022 is applied.
 	const { data } = await admin
 		.from('mcp_tools')
-		.select('name, description, input_schema, http_method, path_template, param_map, app_connection_id')
+		.select('*')
 		.eq('mcp_server_id', serverId)
 		.eq('enabled', true)
 		.order('name');
 	return (data as ToolRow[]) || [];
+}
+
+/**
+ * Human-in-the-loop gate: create a pending approval and wait (polling) for a
+ * dashboard decision. Returns 'approved' | 'denied' | 'timeout'. Fails open
+ * only if the approvals table doesn't exist yet (feature not migrated).
+ */
+async function requestApproval(serverId: string, toolName: string, args: any, clientIp?: string | null): Promise<string> {
+	const admin = createAdminClient();
+	const { data, error } = await admin
+		.from('mcp_approvals')
+		.insert({ mcp_server_id: serverId, tool_name: toolName, args, client_ip: clientIp || null, status: 'pending' })
+		.select('id')
+		.single();
+	if (error || !data) return 'approved'; // table missing → feature inactive
+	const id = data.id;
+	const deadline = Date.now() + 55_000;
+	while (Date.now() < deadline) {
+		await new Promise((r) => setTimeout(r, 2000));
+		const { data: row } = await admin.from('mcp_approvals').select('status').eq('id', id).maybeSingle();
+		if (row && row.status !== 'pending') return row.status;
+	}
+	await admin.from('mcp_approvals').update({ status: 'expired', decided_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending');
+	return 'timeout';
 }
 
 async function loadConnection(id: string): Promise<any> {
@@ -370,6 +397,20 @@ export async function handleRpc(
 					statusCode = 400;
 					response = rpcError(id, INVALID_PARAMS, `No connection for tool: ${toolName}`);
 					break;
+				}
+				// Human-in-the-loop: pause for dashboard approval if flagged.
+				if (tool.requires_approval) {
+					const decision = await requestApproval(server.id, toolName, args, meta.clientIp);
+					if (decision !== 'approved') {
+						statusCode = decision === 'denied' ? 403 : 408;
+						reqBody = args;
+						errorMessage = decision === 'denied' ? 'Call denied by an approver' : 'Approval timed out';
+						response = rpcResult(id, {
+							content: [{ type: 'text', text: `⛔ ${errorMessage}. (Tool "${toolName}" requires human approval.)` }],
+							isError: true,
+						});
+						break;
+					}
 				}
 				const result = await executeTool(connection, tool, args);
 				statusCode = result.isError ? 502 : 200;

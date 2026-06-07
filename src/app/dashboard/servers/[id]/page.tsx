@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge, Boxes, Sparkles } from 'lucide-react';
+import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge, Boxes, Sparkles, ShieldAlert } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import AppIcon from '@/components/AppIcon';
 import { faviconFor } from '@/lib/favicon';
 import ServerConnect from '@/components/ServerConnect';
 import ServerPrompts from '@/components/ServerPrompts';
+import ServerApprovals from '@/components/ServerApprovals';
 import ToolTester from '@/components/ToolTester';
 import { toast } from '@/components/Toaster';
 import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
@@ -70,7 +71,7 @@ export default function ServerDetailPage() {
 			await fetch(`/api/servers/${id}/tools`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tools: tools.map((t) => ({ id: t.id, enabled: t.enabled, name: t.name, description: t.description })) }),
+				body: JSON.stringify({ tools: tools.map((t) => ({ id: t.id, enabled: t.enabled, name: t.name, description: t.description, requires_approval: t.requires_approval })) }),
 			});
 			setToolsDirty(false);
 			loadTools();
@@ -312,6 +313,9 @@ export default function ServerDetailPage() {
 				<ToolTester serverId={id} tools={tools} />
 			</div>
 
+			{/* Pending approvals (only shows when a client is waiting) */}
+			<ServerApprovals serverId={id} />
+
 			{/* Tools (curate) */}
 			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 mb-6">
 				<div className="flex items-center justify-between mb-4">
@@ -330,7 +334,7 @@ export default function ServerDetailPage() {
 				</div>
 				<p className="text-xs text-slate-400 mb-3">
 					Toggle tools on/off, rename them, and edit their descriptions. A clear description helps the LLM pick the right
-					tool. Disabled tools aren’t exposed to clients.
+					tool. Disabled tools aren’t exposed to clients. The shield marks a tool as requiring human approval before it runs.
 				</p>
 				<div className="divide-y">
 					{tools.map((t: any) => (
@@ -353,9 +357,16 @@ export default function ServerDetailPage() {
 										t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
 									}`}
 								/>
-								<span className="text-[11px] font-mono text-slate-400 truncate hidden md:block max-w-[30%]" title={t.path_template}>
+								<span className="text-[11px] font-mono text-slate-400 truncate hidden md:block max-w-[24%]" title={t.path_template}>
 									{t.path_template}
 								</span>
+								<button
+									onClick={() => patchTool(t.id, { requires_approval: !t.requires_approval })}
+									title={t.requires_approval ? 'Requires human approval before running' : 'Runs without approval'}
+									className={`p-1.5 rounded-lg shrink-0 transition ${t.requires_approval ? 'text-amber-600 bg-amber-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
+								>
+									<ShieldAlert className="w-4 h-4" />
+								</button>
 							</div>
 							<input
 								value={t.description || ''}

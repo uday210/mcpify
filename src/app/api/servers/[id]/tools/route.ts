@@ -15,7 +15,7 @@ export async function GET(
 
 	const { data, error } = await supabase
 		.from('mcp_tools')
-		.select('id, name, description, http_method, path_template, enabled, input_schema, param_map')
+		.select('*')
 		.eq('mcp_server_id', id)
 		.order('name');
 
@@ -49,6 +49,7 @@ export async function PATCH(
 			update.name = t.name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 60);
 		}
 		if (typeof t.description === 'string') update.description = t.description.slice(0, 500);
+		if (typeof t.requires_approval === 'boolean') update.requires_approval = t.requires_approval;
 		if (Object.keys(update).length === 0) continue;
 		await supabase.from('mcp_tools').update(update).eq('id', t.id).eq('mcp_server_id', id);
 	}
