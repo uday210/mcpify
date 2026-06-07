@@ -13,7 +13,7 @@ interface Props {
 	oauthClientSecret?: string | null;
 }
 
-const CLIENTS = ['Claude Desktop', 'Claude Code', 'Cursor', 'VS Code', 'ChatGPT', 'cURL'] as const;
+const CLIENTS = ['Claude Desktop', 'Claude Code', 'Cursor', 'VS Code', 'ChatGPT', 'REST / GPT', 'cURL'] as const;
 type Client = (typeof CLIENTS)[number];
 
 export default function ServerConnect({
@@ -52,6 +52,13 @@ ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type
 		bearer ? ` \\\n  --header "Authorization: Bearer ${bearer}"` : ''
 	}`;
 
+	// REST facade (ChatGPT Custom GPT Actions / Zapier / raw HTTP).
+	const restBase = url.replace('/api/mcp/', '/api/rest/');
+	const openapiUrl = `${restBase}/openapi.json`;
+	const restCurl = `curl -X POST "${restBase}/<tool_name>" \\
+${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type: application/json" \\
+  -d '{ "arg": "value" }'`;
+
 	let bodyEl: { code?: string; steps?: string[]; note?: string };
 	switch (client) {
 		case 'Claude Desktop':
@@ -74,6 +81,17 @@ ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type
 					`MCP server URL: ${url}`,
 					authMode === 'none' ? 'No auth required' : `Authorization: Bearer ${bearer}`,
 				],
+			};
+			break;
+		case 'REST / GPT':
+			bodyEl = {
+				steps: [
+					'Use these tools outside MCP — ChatGPT Custom GPT Actions, Zapier, n8n, or plain HTTP.',
+					`OpenAPI schema URL (import this): ${openapiUrl}`,
+					authMode === 'none' ? 'No auth required' : `Auth: Bearer token (API Key above) — set as the Action’s authentication`,
+					'Each tool is POST /<tool_name> with a JSON body of its arguments.',
+				],
+				code: restCurl,
 			};
 			break;
 		case 'cURL':
