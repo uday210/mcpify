@@ -131,9 +131,13 @@ export async function executeKbTool(connection: any, tool: { name: string }, arg
 		.sort((a: any, b: any) => b.score - a.score)
 		.slice(0, topK);
 
-	const text = ranked
-		.map((r: any, i: number) => `# Result ${i + 1} (score ${r.score.toFixed(3)})${r.source ? ` — ${r.source}` : ''}\n${r.content}`)
-		.join('\n\n---\n\n');
+	const header = `Top ${ranked.length} passage(s) from the knowledge base for "${query}". Use them to answer; cite the source.\n`;
+	const text =
+		header +
+		'\n' +
+		ranked
+			.map((r: any, i: number) => `[${i + 1}] source: ${r.source || 'pasted'} (relevance ${r.score.toFixed(2)})\n${r.content}`)
+			.join('\n\n---\n\n');
 	return { content: [{ type: 'text', text }], isError: false };
 }
 

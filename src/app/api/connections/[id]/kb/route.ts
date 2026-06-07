@@ -6,6 +6,25 @@ import { chunkText, embed, findEmbedder } from '@/lib/connectors/kb';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+/** Strip HTML to readable text and collapse the whitespace that wrecks embeddings. */
+function htmlToText(raw: string): string {
+	return raw
+		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
+		.replace(/<(br|\/p|\/div|\/li|\/h[1-6])\s*>/gi, '\n')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&#39;|&apos;/g, "'")
+		.replace(/&quot;/g, '"')
+		.replace(/[ \t]{2,}/g, ' ')
+		.replace(/ *\n */g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}
+
 async function ownedKb(supabase: any, id: string) {
 	const { data } = await supabase.from('app_connections').select('id, org_id, connector_type').eq('id', id).maybeSingle();
 	return data && data.connector_type === 'knowledge' ? data : null;
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 		if (!text && body.url) {
 			try {
 				const raw = await (await fetch(body.url)).text();
-				text = raw.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
+				text = htmlToText(raw);
 				source = source || body.url;
 			} catch {
 				return NextResponse.json({ error: 'Could not fetch the URL.' }, { status: 400 });
