@@ -40,6 +40,7 @@ export default function ServerDetailPage() {
 	const [savingTools, setSavingTools] = useState(false);
 	const [rateLimit, setRateLimit] = useState('');
 	const [savingLimit, setSavingLimit] = useState(false);
+	const [resyncing, setResyncing] = useState(false);
 
 	// Embedded resizable Playground dock.
 	const [playOpen, setPlayOpen] = useState(false);
@@ -153,6 +154,20 @@ export default function ServerDetailPage() {
 			else if (payload.authMode) toast('Access mode updated', 'success');
 			else if (typeof payload.is_active === 'boolean') toast(payload.is_active ? 'Server enabled' : 'Server disabled', 'success');
 			load();
+		}
+	};
+
+	const resync = async () => {
+		setResyncing(true);
+		try {
+			const r = await fetch(`/api/servers/${id}/resync`, { method: 'POST' });
+			const d = await r.json();
+			if (!r.ok) return toast(d.error || 'Could not resync', 'error');
+			toast(`Resynced — ${d.added} added, ${d.updated} updated`, 'success');
+			loadTools();
+			load();
+		} finally {
+			setResyncing(false);
 		}
 	};
 
@@ -342,11 +357,22 @@ export default function ServerDetailPage() {
 					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 mb-6">
 						<div className="flex items-center justify-between mb-4">
 							<h2 className="font-semibold text-slate-900">Tools ({enabledCount}/{tools.length})</h2>
-							{toolsDirty && (
-								<button onClick={saveTools} disabled={savingTools} className="px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50">
-									{savingTools ? 'Saving…' : 'Save changes'}
+							<div className="flex items-center gap-2">
+								<button
+									onClick={resync}
+									disabled={resyncing}
+									title="Pull the latest tools for this app from the catalog"
+									className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
+								>
+									<RotateCw className={`w-3.5 h-3.5 ${resyncing ? 'animate-spin' : ''}`} />
+									{resyncing ? 'Resyncing…' : 'Resync'}
 								</button>
-							)}
+								{toolsDirty && (
+									<button onClick={saveTools} disabled={savingTools} className="px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50">
+										{savingTools ? 'Saving…' : 'Save changes'}
+									</button>
+								)}
+							</div>
 						</div>
 						<p className="text-xs text-slate-400 mb-3">
 							Toggle tools on/off, rename them, and edit their descriptions. A clear description helps the LLM pick the right

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Trash2, CheckCircle2, XCircle, Plus, Server, Boxes, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, RotateCw, Trash2, CheckCircle2, XCircle, Plus, Server, Boxes, AlertTriangle } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { toast } from '@/components/Toaster';
 import { Skeleton } from '@/components/Skeleton';
@@ -15,6 +15,7 @@ export default function ConnectionDetailPage() {
 	const [conn, setConn] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
 	const [verifying, setVerifying] = useState(false);
+	const [resyncing, setResyncing] = useState(false);
 
 	const load = () =>
 		fetch(`/api/connections/${id}`)
@@ -34,6 +35,19 @@ export default function ConnectionDetailPage() {
 			load();
 		} finally {
 			setVerifying(false);
+		}
+	};
+
+	const resync = async () => {
+		setResyncing(true);
+		try {
+			const r = await fetch(`/api/connections/${id}/resync`, { method: 'POST' });
+			const d = await r.json();
+			if (!r.ok) return toast(d.error || 'Could not resync', 'error');
+			toast(`Resynced — ${d.toolCount} tools available`, 'success');
+			load();
+		} finally {
+			setResyncing(false);
 		}
 	};
 
@@ -98,6 +112,14 @@ export default function ConnectionDetailPage() {
 						className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50"
 					>
 						<RefreshCw className={`w-3.5 h-3.5 ${verifying ? 'animate-spin' : ''}`} /> Verify
+					</button>
+					<button
+						onClick={resync}
+						disabled={resyncing}
+						title="Refresh this connection's tools from the latest catalog"
+						className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+					>
+						<RotateCw className={`w-3.5 h-3.5 ${resyncing ? 'animate-spin' : ''}`} /> Resync tools
 					</button>
 					<button onClick={remove} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
 						<Trash2 className="w-4 h-4" />
