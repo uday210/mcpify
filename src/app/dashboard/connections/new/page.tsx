@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
+import { parseCurl } from '@/lib/connectors/curl';
 
 type ConnectorType = 'catalog' | 'openapi' | 'manual';
 type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc' | 'oauth2_account' | 'token_path';
@@ -84,6 +85,8 @@ export default function NewConnectionPage() {
 	const [baseUrl, setBaseUrl] = useState('');
 	// manual
 	const [tools, setTools] = useState<ManualTool[]>([{ name: '', http_method: 'GET', path_template: '/', query: '', body: '' }]);
+	const [staticHeaders, setStaticHeaders] = useState<Record<string, string>>({});
+	const [curlText, setCurlText] = useState('');
 
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -144,6 +147,23 @@ export default function NewConnectionPage() {
 
 	const addTool = () => setTools((t) => [...t, { name: '', http_method: 'GET', path_template: '/', query: '', body: '' }]);
 	const updateTool = (i: number, patch: Partial<ManualTool>) => setTools((t) => t.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+
+	const importCurl = () => {
+		if (!curlText.trim()) return;
+		const p = parseCurl(curlText);
+		if (p.baseUrl) setBaseUrl(p.baseUrl);
+		setStaticHeaders(p.staticHeaders || {});
+		setTools([{ name: p.suggestedName, http_method: p.method, path_template: p.path, query: p.query.join(', '), body: p.bodyKeys.join(', ') }]);
+		setAuthType(p.authType as AuthType);
+		if (p.authType === 'bearer') setKeyValue(p.authValue || '');
+		else if (p.authType === 'custom') { setHeaderName(p.authHeaderName || 'Authorization'); setKeyValue(p.authValue || ''); }
+		else if (p.authType === 'basic') { setBasicUser(p.basicUser || ''); setBasicPass(p.basicPass || ''); }
+		if (!name) {
+			try { setName(new URL(p.baseUrl).hostname.replace(/^www\./, '')); } catch { /* ignore */ }
+		}
+		setTestResult(null);
+		setError(null);
+	};
 	const removeTool = (i: number) => setTools((t) => t.filter((_, idx) => idx !== i));
 
 	const buildManualTools = () =>
@@ -210,6 +230,7 @@ export default function NewConnectionPage() {
 		if (connectorType === 'manual') {
 			body.baseUrl = baseUrl;
 			body.tools = buildManualTools();
+			if (Object.keys(staticHeaders).length) config.static_headers = staticHeaders;
 		}
 		return body;
 	};
@@ -497,6 +518,20 @@ export default function NewConnectionPage() {
 							{/* manual fields */}
 							{connectorType === 'manual' && (
 								<>
+									<div className="p-3 rounded-xl border border-dashed border-cyan-300 bg-cyan-50/40">
+										<label className={labelCls}>Import from cURL</label>
+										<textarea
+											className={`${input} font-mono text-xs`}
+											rows={3}
+											value={curlText}
+											onChange={(e) => setCurlText(e.target.value)}
+											placeholder={`curl https://api.example.com/v1/users -H "Authorization: Bearer TOKEN"`}
+										/>
+										<button onClick={importCurl} className="mt-2 px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition">
+											Parse cURL → fill below
+										</button>
+										<p className="text-xs text-slate-500 mt-1.5">Paste a curl command (from API docs or devtools); we’ll fill the base URL, auth, and a tool.</p>
+									</div>
 									<div>
 										<label className={labelCls}>Base URL</label>
 										<input className={input} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com" />

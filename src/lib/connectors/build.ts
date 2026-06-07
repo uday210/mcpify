@@ -109,6 +109,10 @@ export async function buildConnectionInsert(
 	}
 
 	config.tools = tools;
+	// Static headers supplied by the client (e.g. from a cURL import on a manual connector).
+	if (body.config?.static_headers && typeof body.config.static_headers === 'object' && !config.static_headers) {
+		config.static_headers = body.config.static_headers;
+	}
 
 	// --- Auth-type-specific config + credential encryption.
 	const credsInput = body.credentials || {};
