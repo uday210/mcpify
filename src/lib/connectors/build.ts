@@ -47,6 +47,23 @@ export async function buildConnectionInsert(
 			baseUrl = baseUrl || catalog.baseUrl || def.base_url;
 		}
 		tools = catalog.tools;
+		// OpenAPI-backed catalog: if the app ships a spec URL, generate the full
+		// tool set from it (curated tools remain the fallback if the fetch fails).
+		if (def.config?.openapi_url) {
+			try {
+				const resp = await fetch(def.config.openapi_url);
+				if (resp.ok) {
+					const parsed = parseSpecString(await resp.text());
+					if (parsed.tools.length) {
+						tools = parsed.tools;
+						if (!baseUrl && parsed.baseUrl) baseUrl = parsed.baseUrl;
+						openapiSpec = { source: def.config.openapi_url, title: parsed.title };
+					}
+				}
+			} catch {
+				/* keep curated tools */
+			}
+		}
 		// Carry catalog OAuth endpoints into config for the OAuth flow.
 		if (def.config?.oauth) config.oauth = { ...def.config.oauth };
 		if (def.config?.api_key_in) config.api_key_in = def.config.api_key_in;

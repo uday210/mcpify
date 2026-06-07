@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
 				supports_oauth: !!a.config?.oauth,
 				needs_base_url: !!a.config?.needs_base_url,
 				base_url_hint: a.config?.base_url_hint || null,
+				full_api: !!a.config?.openapi_url,
 				needs_oauth_domain: !!a.config?.needs_oauth_domain,
 				oauth_domain_label: a.config?.oauth_domain_label || null,
 				oauth_domain_hint: a.config?.oauth_domain_hint || null,

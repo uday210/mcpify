@@ -22,6 +22,7 @@ interface CatalogApp {
 	toolCount: number;
 	needs_base_url?: boolean;
 	base_url_hint?: string | null;
+	full_api?: boolean;
 	needs_oauth_domain?: boolean;
 	oauth_domain_label?: string | null;
 	oauth_domain_hint?: string | null;
@@ -429,7 +430,9 @@ export default function NewConnectionPage() {
 								<div className="min-w-0">
 									<h2 className="text-lg font-bold text-slate-900">{selectedApp.name}</h2>
 									<div className="flex items-center gap-1.5 mt-1">
-										<span className="px-2 py-0.5 rounded-full text-[11px] bg-white/70 text-slate-600">{selectedApp.toolCount} tools</span>
+										<span className="px-2 py-0.5 rounded-full text-[11px] bg-white/70 text-slate-600">
+											{selectedApp.full_api ? 'full API (auto-generated)' : `${selectedApp.toolCount} tools`}
+										</span>
 										<span className="px-2 py-0.5 rounded-full text-[11px] bg-white/70 text-slate-600">{selectedApp.auth_type}</span>
 									</div>
 								</div>
