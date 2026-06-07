@@ -475,16 +475,37 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://api.calendly.com',
 		tools: [
 			tool('get_current_user', 'Get the current Calendly user.', 'GET', '/users/me', []),
+			tool('list_event_types', 'List event types.', 'GET', '/event_types', [{ name: 'user', in: 'query', description: 'User URI' }]),
 			tool('list_scheduled_events', 'List scheduled events.', 'GET', '/scheduled_events', [
 				{ name: 'user', in: 'query', required: true, description: 'User URI (from get_current_user)' },
+				{ name: 'status', in: 'query', description: 'active or canceled' },
 			]),
+			tool('get_event', 'Get a scheduled event.', 'GET', '/scheduled_events/{uuid}', [{ name: 'uuid', in: 'path', required: true }]),
+			tool('list_invitees', 'List an event’s invitees.', 'GET', '/scheduled_events/{uuid}/invitees', [{ name: 'uuid', in: 'path', required: true }]),
 		],
 	},
 	intercom: {
 		baseUrl: 'https://api.intercom.io',
 		tools: [
 			tool('list_contacts', 'List contacts.', 'GET', '/contacts', []),
+			tool('get_contact', 'Get a contact.', 'GET', '/contacts/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('search_contacts', 'Search contacts.', 'POST', '/contacts/search', [
+				{ name: 'query', in: 'body', required: true, type: 'object', description: '{"field":"email","operator":"=","value":"a@b.com"}' },
+			]),
+			tool('create_contact', 'Create a contact.', 'POST', '/contacts', [
+				{ name: 'role', in: 'body', description: 'user or lead' },
+				{ name: 'email', in: 'body' },
+				{ name: 'name', in: 'body' },
+			]),
 			tool('list_conversations', 'List conversations.', 'GET', '/conversations', []),
+			tool('get_conversation', 'Get a conversation.', 'GET', '/conversations/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('reply_conversation', 'Reply to a conversation.', 'POST', '/conversations/{id}/reply', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'message_type', in: 'body', required: true, description: 'comment or note' },
+				{ name: 'type', in: 'body', required: true, description: 'admin or user' },
+				{ name: 'body', in: 'body', required: true },
+				{ name: 'admin_id', in: 'body' },
+			]),
 			tool('list_admins', 'List workspace admins.', 'GET', '/admins', []),
 		],
 	},
@@ -508,11 +529,32 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('list_models', 'List available models.', 'GET', '/models', []),
 			tool('get_model', 'Retrieve a model.', 'GET', '/models/{model}', [{ name: 'model', in: 'path', required: true }]),
+			tool('chat_completion', 'Create a chat completion.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hi"}]}' },
+			]),
+			tool('embeddings', 'Create embeddings.', 'POST', '/embeddings', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"text-embedding-3-small","input":"hello"}' },
+			]),
+			tool('create_image', 'Generate an image.', 'POST', '/images/generations', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"gpt-image-1","prompt":"a cat","size":"1024x1024"}' },
+			]),
+			tool('moderations', 'Classify text for policy violations.', 'POST', '/moderations', [
+				{ name: 'body', in: 'body', required: true, description: '{"input":"text to check"}' },
+			]),
+			tool('list_files', 'List uploaded files.', 'GET', '/files', []),
 		],
 	},
 	anthropic: {
 		baseUrl: 'https://api.anthropic.com',
-		tools: [tool('list_models', 'List available Claude models.', 'GET', '/v1/models', [])],
+		tools: [
+			tool('list_models', 'List available Claude models.', 'GET', '/v1/models', []),
+			tool('create_message', 'Create a Claude message.', 'POST', '/v1/messages', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"claude-3-5-sonnet-latest","max_tokens":1024,"messages":[{"role":"user","content":"Hi"}]}' },
+			]),
+			tool('count_tokens', 'Count tokens for a request.', 'POST', '/v1/messages/count_tokens', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"claude-3-5-sonnet-latest","messages":[{"role":"user","content":"Hi"}]}' },
+			]),
+		],
 	},
 	twilio: {
 		baseUrl: 'https://api.twilio.com',
@@ -520,6 +562,23 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_messages', 'List recent SMS messages.', 'GET', '/2010-04-01/Accounts/{AccountSid}/Messages.json', [
 				{ name: 'AccountSid', in: 'path', required: true },
 				{ name: 'PageSize', in: 'query', type: 'integer' },
+			]),
+			tool('get_message', 'Get one message.', 'GET', '/2010-04-01/Accounts/{AccountSid}/Messages/{Sid}.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+				{ name: 'Sid', in: 'path', required: true },
+			]),
+			tool('list_calls', 'List recent calls.', 'GET', '/2010-04-01/Accounts/{AccountSid}/Calls.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+				{ name: 'PageSize', in: 'query', type: 'integer' },
+			]),
+			tool('list_phone_numbers', 'List your Twilio numbers.', 'GET', '/2010-04-01/Accounts/{AccountSid}/IncomingPhoneNumbers.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+			]),
+			tool('get_balance', 'Account balance.', 'GET', '/2010-04-01/Accounts/{AccountSid}/Balance.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+			]),
+			tool('get_account', 'Account details.', 'GET', '/2010-04-01/Accounts/{AccountSid}.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
 			]),
 		],
 	},
@@ -554,6 +613,17 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('get_me', 'Get the authenticated user.', 'GET', '/v1/me', []),
 			tool('get_file', 'Get a Figma file by key.', 'GET', '/v1/files/{file_key}', [{ name: 'file_key', in: 'path', required: true }]),
+			tool('get_file_nodes', 'Get specific nodes from a file.', 'GET', '/v1/files/{file_key}/nodes', [
+				{ name: 'file_key', in: 'path', required: true },
+				{ name: 'ids', in: 'query', required: true, description: 'comma-separated node ids' },
+			]),
+			tool('get_images', 'Render nodes as images.', 'GET', '/v1/images/{file_key}', [
+				{ name: 'file_key', in: 'path', required: true },
+				{ name: 'ids', in: 'query', required: true },
+				{ name: 'format', in: 'query', description: 'png, jpg, svg, pdf' },
+			]),
+			tool('get_comments', 'List a file’s comments.', 'GET', '/v1/files/{file_key}/comments', [{ name: 'file_key', in: 'path', required: true }]),
+			tool('get_project_files', 'List files in a project.', 'GET', '/v1/projects/{project_id}/files', [{ name: 'project_id', in: 'path', required: true }]),
 		],
 	},
 	unsplash: {
@@ -631,7 +701,24 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('list_folder', 'List files/folders in a path.', 'POST', '/files/list_folder', [
 				{ name: 'path', in: 'body', required: true, description: 'e.g. "" for root or "/Docs"' },
+				{ name: 'recursive', in: 'body', type: 'boolean' },
 			]),
+			tool('search', 'Search files and folders.', 'POST', '/files/search_v2', [
+				{ name: 'query', in: 'body', required: true },
+			]),
+			tool('get_metadata', 'Get a file/folder’s metadata.', 'POST', '/files/get_metadata', [
+				{ name: 'path', in: 'body', required: true, description: 'Path or id' },
+			]),
+			tool('create_folder', 'Create a folder.', 'POST', '/files/create_folder_v2', [
+				{ name: 'path', in: 'body', required: true },
+			]),
+			tool('delete', 'Delete a file or folder.', 'POST', '/files/delete_v2', [
+				{ name: 'path', in: 'body', required: true },
+			]),
+			tool('create_shared_link', 'Create a shareable link.', 'POST', '/sharing/create_shared_link_with_settings', [
+				{ name: 'path', in: 'body', required: true },
+			]),
+			tool('get_space_usage', 'Get storage usage.', 'POST', '/users/get_space_usage', []),
 			tool('get_current_account', 'Get the current account.', 'POST', '/users/get_current_account', []),
 		],
 	},
@@ -687,9 +774,29 @@ export const CATALOG: Record<string, CatalogConnector> = {
 	pipedrive: {
 		baseUrl: 'https://api.pipedrive.com/v1',
 		tools: [
-			tool('list_deals', 'List deals.', 'GET', '/deals', [{ name: 'limit', in: 'query', type: 'integer' }]),
-			tool('list_persons', 'List persons.', 'GET', '/persons', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_deals', 'List deals.', 'GET', '/deals', [{ name: 'limit', in: 'query', type: 'integer' }, { name: 'status', in: 'query', description: 'open, won, lost' }]),
+			tool('get_deal', 'Get a deal.', 'GET', '/deals/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('add_deal', 'Create a deal.', 'POST', '/deals', [
+				{ name: 'title', in: 'body', required: true },
+				{ name: 'value', in: 'body' },
+				{ name: 'person_id', in: 'body', type: 'integer' },
+			]),
+			tool('update_deal', 'Update a deal.', 'PUT', '/deals/{id}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'status', in: 'body', description: 'open, won, lost' },
+				{ name: 'value', in: 'body' },
+			]),
 			tool('search_deals', 'Search deals.', 'GET', '/deals/search', [{ name: 'term', in: 'query', required: true }]),
+			tool('list_persons', 'List persons.', 'GET', '/persons', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('add_person', 'Create a person.', 'POST', '/persons', [
+				{ name: 'name', in: 'body', required: true },
+				{ name: 'email', in: 'body', type: 'array' },
+				{ name: 'phone', in: 'body', type: 'array' },
+			]),
+			tool('list_organizations', 'List organizations.', 'GET', '/organizations', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_activities', 'List activities.', 'GET', '/activities', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_pipelines', 'List pipelines.', 'GET', '/pipelines', []),
+			tool('list_stages', 'List stages.', 'GET', '/stages', []),
 		],
 	},
 	sentry: {
@@ -918,7 +1025,15 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('list_locations', 'List business locations.', 'GET', '/v2/locations', []),
 			tool('list_payments', 'List payments.', 'GET', '/v2/payments', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_payment', 'Retrieve a payment.', 'GET', '/v2/payments/{payment_id}', [{ name: 'payment_id', in: 'path', required: true }]),
 			tool('list_customers', 'List customers.', 'GET', '/v2/customers', []),
+			tool('get_customer', 'Retrieve a customer.', 'GET', '/v2/customers/{customer_id}', [{ name: 'customer_id', in: 'path', required: true }]),
+			tool('search_orders', 'Search orders.', 'POST', '/v2/orders/search', [
+				{ name: 'location_ids', in: 'body', required: true, type: 'array' },
+			]),
+			tool('list_catalog', 'List catalog objects.', 'GET', '/v2/catalog/list', [{ name: 'types', in: 'query', description: 'ITEM, CATEGORY, …' }]),
+			tool('list_refunds', 'List refunds.', 'GET', '/v2/refunds', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_invoices', 'List invoices.', 'GET', '/v2/invoices', [{ name: 'location_id', in: 'query', required: true }]),
 		],
 	},
 	shippo: {
@@ -975,6 +1090,14 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('get_account', 'Get account info.', 'GET', '/account', []),
 			tool('list_contacts', 'List contacts.', 'GET', '/contacts', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_contact', 'Get a contact by email or id.', 'GET', '/contacts/{identifier}', [{ name: 'identifier', in: 'path', required: true }]),
+			tool('create_contact', 'Create a contact.', 'POST', '/contacts', [
+				{ name: 'email', in: 'body', required: true },
+				{ name: 'attributes', in: 'body', type: 'object' },
+				{ name: 'listIds', in: 'body', type: 'array' },
+			]),
+			tool('list_folders', 'List contact folders.', 'GET', '/contacts/folders', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_email_campaigns', 'List email campaigns.', 'GET', '/emailCampaigns', []),
 			tool('send_email', 'Send a transactional email.', 'POST', '/smtp/email', [
 				{ name: 'body', in: 'body', required: true, type: 'object', description: '{ "sender":{"email":"a@b.com"}, "to":[{"email":"c@d.com"}], "subject":"Hi", "htmlContent":"<p>Hi</p>" }' },
 			]),
@@ -1037,6 +1160,25 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'spreadsheetId', in: 'path', required: true },
 				{ name: 'range', in: 'path', required: true, description: 'e.g. Sheet1!A1:C10' },
 			]),
+			tool('update_values', 'Write values to a range.', 'PUT', '/spreadsheets/{spreadsheetId}/values/{range}', [
+				{ name: 'spreadsheetId', in: 'path', required: true },
+				{ name: 'range', in: 'path', required: true },
+				{ name: 'valueInputOption', in: 'query', description: 'RAW or USER_ENTERED' },
+				{ name: 'values', in: 'body', required: true, type: 'array', description: '[["a","b"],["c","d"]]' },
+			]),
+			tool('append_values', 'Append rows to a range.', 'POST', '/spreadsheets/{spreadsheetId}/values/{range}:append', [
+				{ name: 'spreadsheetId', in: 'path', required: true },
+				{ name: 'range', in: 'path', required: true },
+				{ name: 'valueInputOption', in: 'query', description: 'RAW or USER_ENTERED' },
+				{ name: 'values', in: 'body', required: true, type: 'array' },
+			]),
+			tool('clear_values', 'Clear a range.', 'POST', '/spreadsheets/{spreadsheetId}/values/{range}:clear', [
+				{ name: 'spreadsheetId', in: 'path', required: true },
+				{ name: 'range', in: 'path', required: true },
+			]),
+			tool('create_spreadsheet', 'Create a spreadsheet.', 'POST', '/spreadsheets', [
+				{ name: 'properties', in: 'body', type: 'object', description: '{"title":"My sheet"}' },
+			]),
 		],
 	},
 	gmail: {
@@ -1047,6 +1189,19 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'maxResults', in: 'query', type: 'integer' },
 			]),
 			tool('get_message', 'Get a message by id.', 'GET', '/users/me/messages/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_threads', 'List/search threads.', 'GET', '/users/me/threads', [{ name: 'q', in: 'query' }]),
+			tool('get_thread', 'Get a thread.', 'GET', '/users/me/threads/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_labels', 'List labels.', 'GET', '/users/me/labels', []),
+			tool('modify_message', 'Add/remove labels on a message.', 'POST', '/users/me/messages/{id}/modify', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'addLabelIds', in: 'body', type: 'array' },
+				{ name: 'removeLabelIds', in: 'body', type: 'array' },
+			]),
+			tool('trash_message', 'Move a message to trash.', 'POST', '/users/me/messages/{id}/trash', [{ name: 'id', in: 'path', required: true }]),
+			tool('send_message', 'Send a raw RFC822 message.', 'POST', '/users/me/messages/send', [
+				{ name: 'raw', in: 'body', required: true, description: 'base64url-encoded RFC822 email' },
+			]),
+			tool('get_profile', 'Get the mailbox profile.', 'GET', '/users/me/profile', []),
 		],
 	},
 	google_calendar: {
@@ -1057,6 +1212,28 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'calendarId', in: 'path', required: true, description: 'e.g. primary' },
 				{ name: 'maxResults', in: 'query', type: 'integer' },
 				{ name: 'timeMin', in: 'query', description: 'RFC3339 lower bound' },
+				{ name: 'q', in: 'query', description: 'free-text search' },
+			]),
+			tool('get_event', 'Get an event.', 'GET', '/calendars/{calendarId}/events/{eventId}', [
+				{ name: 'calendarId', in: 'path', required: true },
+				{ name: 'eventId', in: 'path', required: true },
+			]),
+			tool('create_event', 'Create an event.', 'POST', '/calendars/{calendarId}/events', [
+				{ name: 'calendarId', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"summary":"Meet","start":{"dateTime":"2026-06-10T15:00:00Z"},"end":{"dateTime":"2026-06-10T15:30:00Z"}}' },
+			]),
+			tool('update_event', 'Update an event.', 'PUT', '/calendars/{calendarId}/events/{eventId}', [
+				{ name: 'calendarId', in: 'path', required: true },
+				{ name: 'eventId', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true },
+			]),
+			tool('delete_event', 'Delete an event.', 'DELETE', '/calendars/{calendarId}/events/{eventId}', [
+				{ name: 'calendarId', in: 'path', required: true },
+				{ name: 'eventId', in: 'path', required: true },
+			]),
+			tool('quick_add', 'Create an event from text.', 'POST', '/calendars/{calendarId}/events/quickAdd', [
+				{ name: 'calendarId', in: 'path', required: true },
+				{ name: 'text', in: 'query', required: true, description: 'e.g. Lunch tomorrow 1pm' },
 			]),
 		],
 	},
@@ -1064,8 +1241,18 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://graph.microsoft.com/v1.0',
 		tools: [
 			tool('me', 'Get the signed-in user.', 'GET', '/me', []),
-			tool('list_messages', 'List Outlook messages.', 'GET', '/me/messages', [{ name: '$top', in: 'query', type: 'integer' }]),
+			tool('list_messages', 'List Outlook messages.', 'GET', '/me/messages', [{ name: '$top', in: 'query', type: 'integer' }, { name: '$search', in: 'query' }]),
+			tool('get_message', 'Get a message.', 'GET', '/me/messages/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('send_mail', 'Send an email.', 'POST', '/me/sendMail', [
+				{ name: 'body', in: 'body', required: true, description: '{"message":{"subject":"Hi","body":{"contentType":"Text","content":"Hello"},"toRecipients":[{"emailAddress":{"address":"a@b.com"}}]}}' },
+			]),
 			tool('list_events', 'List calendar events.', 'GET', '/me/events', [{ name: '$top', in: 'query', type: 'integer' }]),
+			tool('create_event', 'Create a calendar event.', 'POST', '/me/events', [
+				{ name: 'body', in: 'body', required: true, description: '{"subject":"Meet","start":{"dateTime":"2026-06-10T15:00:00","timeZone":"UTC"},"end":{"dateTime":"2026-06-10T15:30:00","timeZone":"UTC"}}' },
+			]),
+			tool('list_drive_items', 'List files in your OneDrive root.', 'GET', '/me/drive/root/children', []),
+			tool('list_contacts', 'List Outlook contacts.', 'GET', '/me/contacts', [{ name: '$top', in: 'query', type: 'integer' }]),
+			tool('list_joined_teams', 'List Teams you’ve joined.', 'GET', '/me/joinedTeams', []),
 		],
 	},
 	spotify: {
@@ -1078,6 +1265,12 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'limit', in: 'query', type: 'integer' },
 			]),
 			tool('my_playlists', 'List the current user’s playlists.', 'GET', '/me/playlists', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_playlist', 'Get a playlist.', 'GET', '/playlists/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('get_artist', 'Get an artist.', 'GET', '/artists/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('get_album', 'Get an album.', 'GET', '/albums/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('get_track', 'Get a track.', 'GET', '/tracks/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('my_top', 'Your top artists or tracks.', 'GET', '/me/top/{type}', [{ name: 'type', in: 'path', required: true, description: 'artists or tracks' }]),
+			tool('recently_played', 'Recently played tracks.', 'GET', '/me/player/recently-played', [{ name: 'limit', in: 'query', type: 'integer' }]),
 		],
 	},
 	typeform: {
@@ -1356,11 +1549,32 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('soql_query', 'Run a SOQL query.', 'GET', '/services/data/v60.0/query', [
 				{ name: 'q', in: 'query', required: true, description: 'e.g. SELECT Id, Name FROM Account LIMIT 10' },
 			]),
+			tool('search_sosl', 'Run a SOSL search.', 'GET', '/services/data/v60.0/search', [
+				{ name: 'q', in: 'query', required: true, description: 'e.g. FIND {Acme} IN ALL FIELDS RETURNING Account(Id,Name)' },
+			]),
 			tool('list_sobjects', 'List available objects.', 'GET', '/services/data/v60.0/sobjects', []),
+			tool('describe_sobject', 'Describe an object’s fields.', 'GET', '/services/data/v60.0/sobjects/{sobject}/describe', [
+				{ name: 'sobject', in: 'path', required: true },
+			]),
 			tool('get_record', 'Get a record by type + id.', 'GET', '/services/data/v60.0/sobjects/{sobject}/{id}', [
 				{ name: 'sobject', in: 'path', required: true, description: 'e.g. Account, Contact' },
 				{ name: 'id', in: 'path', required: true },
 			]),
+			tool('create_record', 'Create a record.', 'POST', '/services/data/v60.0/sobjects/{sobject}', [
+				{ name: 'sobject', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"Name":"Acme","Industry":"Tech"}' },
+			]),
+			tool('update_record', 'Update a record (PATCH fields).', 'PATCH', '/services/data/v60.0/sobjects/{sobject}/{id}', [
+				{ name: 'sobject', in: 'path', required: true },
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"Phone":"555-1234"}' },
+			]),
+			tool('delete_record', 'Delete a record.', 'DELETE', '/services/data/v60.0/sobjects/{sobject}/{id}', [
+				{ name: 'sobject', in: 'path', required: true },
+				{ name: 'id', in: 'path', required: true },
+			]),
+			tool('recent_items', 'Recently viewed records.', 'GET', '/services/data/v60.0/recent', []),
+			tool('limits', 'Org API limits/usage.', 'GET', '/services/data/v60.0/limits', []),
 		],
 	},
 	tavily: {
@@ -1605,13 +1819,33 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_files', 'List/search files.', 'GET', '/files', [
 				{ name: 'q', in: 'query', description: "e.g. name contains 'report'" },
 				{ name: 'pageSize', in: 'query', type: 'integer' },
+				{ name: 'orderBy', in: 'query', description: 'e.g. modifiedTime desc' },
 			]),
-			tool('get_file', 'Get file metadata.', 'GET', '/files/{fileId}', [{ name: 'fileId', in: 'path', required: true }]),
+			tool('get_file', 'Get file metadata.', 'GET', '/files/{fileId}', [
+				{ name: 'fileId', in: 'path', required: true },
+				{ name: 'fields', in: 'query', description: 'e.g. id,name,mimeType,size' },
+			]),
+			tool('export_file', 'Export a Google Doc/Sheet to text/csv etc.', 'GET', '/files/{fileId}/export', [
+				{ name: 'fileId', in: 'path', required: true },
+				{ name: 'mimeType', in: 'query', required: true, description: 'e.g. text/plain, text/csv, application/pdf' },
+			]),
+			tool('create_folder', 'Create a folder.', 'POST', '/files', [
+				{ name: 'body', in: 'body', required: true, description: '{"name":"Reports","mimeType":"application/vnd.google-apps.folder"}' },
+			]),
+			tool('delete_file', 'Delete a file.', 'DELETE', '/files/{fileId}', [{ name: 'fileId', in: 'path', required: true }]),
+			tool('about', 'Storage quota + user info.', 'GET', '/about', [{ name: 'fields', in: 'query', description: 'e.g. storageQuota,user' }]),
 		],
 	},
 	google_docs: {
 		baseUrl: 'https://docs.googleapis.com/v1',
-		tools: [tool('get_document', 'Get a document.', 'GET', '/documents/{documentId}', [{ name: 'documentId', in: 'path', required: true }])],
+		tools: [
+			tool('get_document', 'Get a document.', 'GET', '/documents/{documentId}', [{ name: 'documentId', in: 'path', required: true }]),
+			tool('create_document', 'Create a blank document.', 'POST', '/documents', [{ name: 'title', in: 'body', required: true }]),
+			tool('batch_update', 'Apply edits to a document.', 'POST', '/documents/{documentId}:batchUpdate', [
+				{ name: 'documentId', in: 'path', required: true },
+				{ name: 'requests', in: 'body', required: true, type: 'array', description: '[{"insertText":{"location":{"index":1},"text":"Hello"}}]' },
+			]),
+		],
 	},
 	// --- Per-account base URL apps ---
 	shopify: {
@@ -1666,6 +1900,18 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('search', 'Search Zendesk.', 'GET', '/api/v2/search.json', [{ name: 'query', in: 'query', required: true }]),
 			tool('list_tickets', 'List tickets.', 'GET', '/api/v2/tickets.json', []),
+			tool('get_ticket', 'Get a ticket.', 'GET', '/api/v2/tickets/{id}.json', [{ name: 'id', in: 'path', required: true }]),
+			tool('create_ticket', 'Create a ticket.', 'POST', '/api/v2/tickets.json', [
+				{ name: 'body', in: 'body', required: true, description: '{"ticket":{"subject":"Help","comment":{"body":"..."}}}' },
+			]),
+			tool('update_ticket', 'Update a ticket.', 'PUT', '/api/v2/tickets/{id}.json', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"ticket":{"status":"solved"}}' },
+			]),
+			tool('list_ticket_comments', 'List a ticket’s comments.', 'GET', '/api/v2/tickets/{id}/comments.json', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_users', 'List users.', 'GET', '/api/v2/users.json', []),
+			tool('get_user', 'Get a user.', 'GET', '/api/v2/users/{id}.json', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_organizations', 'List organizations.', 'GET', '/api/v2/organizations.json', []),
 		],
 	},
 	mailchimp: {
@@ -1673,7 +1919,20 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('ping', 'Health check.', 'GET', '/ping', []),
 			tool('list_audiences', 'List audiences/lists.', 'GET', '/lists', []),
+			tool('get_list', 'Get an audience/list.', 'GET', '/lists/{list_id}', [{ name: 'list_id', in: 'path', required: true }]),
+			tool('list_members', 'List members of an audience.', 'GET', '/lists/{list_id}/members', [
+				{ name: 'list_id', in: 'path', required: true },
+				{ name: 'count', in: 'query', type: 'integer' },
+			]),
+			tool('add_member', 'Add a member to an audience.', 'POST', '/lists/{list_id}/members', [
+				{ name: 'list_id', in: 'path', required: true },
+				{ name: 'email_address', in: 'body', required: true },
+				{ name: 'status', in: 'body', required: true, description: 'subscribed, unsubscribed, pending' },
+				{ name: 'merge_fields', in: 'body', type: 'object' },
+			]),
 			tool('list_campaigns', 'List campaigns.', 'GET', '/campaigns', []),
+			tool('get_campaign', 'Get a campaign.', 'GET', '/campaigns/{campaign_id}', [{ name: 'campaign_id', in: 'path', required: true }]),
+			tool('campaign_report', 'Get a campaign’s report.', 'GET', '/reports/{campaign_id}', [{ name: 'campaign_id', in: 'path', required: true }]),
 		],
 	},
 	telegram: {
