@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge, Boxes } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, RotateCw, Trash2, Power, Activity as ActivityIcon, AlertTriangle, Gauge, Boxes, Sparkles } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import AppIcon from '@/components/AppIcon';
 import { faviconFor } from '@/lib/favicon';
@@ -163,6 +164,13 @@ export default function ServerDetailPage() {
 					</div>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
+					<Link
+						href={`/dashboard/servers/${id}/playground`}
+						className="flex items-center gap-1.5 px-3.5 py-2 text-sm bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:shadow-lift transition"
+					>
+						<Sparkles className="w-4 h-4" />
+						<span className="hidden sm:inline">Playground</span>
+					</Link>
 					<button
 						onClick={() => patch({ is_active: !server.is_active })}
 						className="flex items-center gap-1.5 px-3.5 py-2 text-sm border border-slate-300 rounded-xl hover:bg-slate-50 transition"
