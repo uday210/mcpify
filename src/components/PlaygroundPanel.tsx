@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Send, Wrench, Sparkles, Loader2, X } from 'lucide-react';
+import { Send, Wrench, Sparkles, Loader2, X, Columns3 } from 'lucide-react';
 import { getPrefs } from '@/lib/preferences';
 
 interface Turn {
@@ -73,6 +73,9 @@ export default function PlaygroundPanel({
 					{meta && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 truncate">{meta.provider}</span>}
 				</div>
 				<div className="flex items-center gap-1">
+					<Link href={`/dashboard/servers/${serverId}/compare`} className="flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-600 px-1.5" title="Compare models side by side">
+						<Columns3 className="w-3.5 h-3.5" /> Compare
+					</Link>
 					{turns.length > 0 && (
 						<button onClick={() => { setTurns([]); setError(null); }} className="text-xs text-slate-400 hover:text-slate-600 px-1.5">Clear</button>
 					)}
