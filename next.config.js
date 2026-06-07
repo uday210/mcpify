@@ -3,6 +3,9 @@ const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Keep native/CJS server libs out of the webpack bundle (they use dynamic
+  // requires / fs that don't bundle cleanly).
+  serverExternalPackages: ['pdf-parse', 'pg'],
   // Pin the workspace root so a parent lockfile doesn't confuse output tracing
   // (matters for the Railway/standalone build).
   outputFileTracingRoot: path.join(__dirname),
