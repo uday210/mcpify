@@ -1073,3 +1073,6 @@ CREATE TABLE IF NOT EXISTS mcp_approvals (
 );
 CREATE INDEX IF NOT EXISTS idx_mcp_approvals_pending ON mcp_approvals(mcp_server_id, status);
 ALTER TABLE mcp_approvals ENABLE ROW LEVEL SECURITY;
+
+-- ============================ composite tools (migration 023) ================
+ALTER TABLE mcp_tools ADD COLUMN IF NOT EXISTS composite_steps JSONB;

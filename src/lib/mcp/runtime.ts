@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { executeTool } from '@/lib/proxy';
 import { redactObject, redactText } from '@/lib/mcp/redact';
+import { buildStepArgs, type CompositeCtx } from '@/lib/mcp/composite';
 import type { AuthedServer } from '@/lib/mcp/auth';
 import {
 	JsonRpcRequest,
@@ -133,6 +134,7 @@ interface ToolRow {
 	param_map: Array<Record<string, any>>;
 	app_connection_id: string | null;
 	requires_approval?: boolean;
+	composite_steps?: Array<{ tool: string; args: Record<string, any> }> | null;
 }
 
 async function loadTools(serverId: string): Promise<ToolRow[]> {
@@ -200,6 +202,49 @@ async function loadCustomPrompts(serverId: string): Promise<CustomPrompt[]> {
 	} catch {
 		return [];
 	}
+}
+
+/** Run a composite tool: each step calls another tool, piping outputs forward. */
+async function executeComposite(tool: ToolRow, args: Record<string, any>, tools: ToolRow[], authed: AuthedServer) {
+	const ctx: CompositeCtx = { input: args || {}, steps: [] };
+	const parts: string[] = [];
+	let isError = false;
+
+	const steps = tool.composite_steps || [];
+	for (let i = 0; i < steps.length; i++) {
+		const step = steps[i];
+		const stepTool = tools.find((t) => t.name === step.tool);
+		if (!stepTool) {
+			parts.push(`Step ${i + 1} (${step.tool}): error — tool not found`);
+			isError = true;
+			break;
+		}
+		const connection = stepTool.app_connection_id ? await loadConnection(stepTool.app_connection_id) : authed.connection;
+		if (!connection) {
+			parts.push(`Step ${i + 1} (${step.tool}): error — no connection`);
+			isError = true;
+			break;
+		}
+		const stepArgs = buildStepArgs(step.args || {}, ctx);
+		const r = await executeTool(connection, stepTool, stepArgs);
+		const text = r.content?.map((c: any) => c.text).join('\n') || '';
+		let json: any = undefined;
+		// The proxy prefixes a status line; try to parse the JSON body that follows.
+		const body = text.includes('\n\n') ? text.slice(text.indexOf('\n\n') + 2) : text;
+		try {
+			json = JSON.parse(body);
+		} catch {
+			/* not JSON */
+		}
+		ctx.steps.push({ text, json });
+		parts.push(`Step ${i + 1} (${step.tool}):\n${text}`);
+		if (r.isError) {
+			isError = true;
+			break; // stop the chain on failure
+		}
+	}
+
+	return { content: [{ type: 'text' as const, text: parts.join('\n\n') }], isError };
 }
 
 /** Substitute {{arg}} placeholders in a custom prompt template. */
@@ -389,15 +434,6 @@ export async function handleRpc(
 					response = rpcError(id, INVALID_PARAMS, `Unknown tool: ${toolName}`);
 					break;
 				}
-				// Aggregate servers route each tool to its own connection.
-				const connection = tool.app_connection_id
-					? await loadConnection(tool.app_connection_id)
-					: authed.connection;
-				if (!connection) {
-					statusCode = 400;
-					response = rpcError(id, INVALID_PARAMS, `No connection for tool: ${toolName}`);
-					break;
-				}
 				// Human-in-the-loop: pause for dashboard approval if flagged.
 				if (tool.requires_approval) {
 					const decision = await requestApproval(server.id, toolName, args, meta.clientIp);
@@ -412,9 +448,23 @@ export async function handleRpc(
 						break;
 					}
 				}
-				const result = await executeTool(connection, tool, args);
-				statusCode = result.isError ? 502 : 200;
+
 				reqBody = args;
+				let result;
+				if (Array.isArray(tool.composite_steps) && tool.composite_steps.length) {
+					// Composite tool: run its steps in sequence.
+					result = await executeComposite(tool, args, tools, authed);
+				} else {
+					// Aggregate servers route each tool to its own connection.
+					const connection = tool.app_connection_id ? await loadConnection(tool.app_connection_id) : authed.connection;
+					if (!connection) {
+						statusCode = 400;
+						response = rpcError(id, INVALID_PARAMS, `No connection for tool: ${toolName}`);
+						break;
+					}
+					result = await executeTool(connection, tool, args);
+				}
+				statusCode = result.isError ? 502 : 200;
 				respText = result.content?.map((c: any) => c.text).join('\n').slice(0, 8000) || null;
 				response = rpcResult(id, { content: result.content, isError: result.isError });
 				break;

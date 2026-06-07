@@ -9,6 +9,7 @@ import AppIcon from '@/components/AppIcon';
 import { faviconFor } from '@/lib/favicon';
 import ServerConnect from '@/components/ServerConnect';
 import ServerPrompts from '@/components/ServerPrompts';
+import ServerComposite from '@/components/ServerComposite';
 import ServerApprovals from '@/components/ServerApprovals';
 import ToolTester from '@/components/ToolTester';
 import { toast } from '@/components/Toaster';
@@ -379,6 +380,9 @@ export default function ServerDetailPage() {
 					{tools.length === 0 && <p className="text-sm text-slate-400 py-2">No tools.</p>}
 				</div>
 			</div>
+
+			{/* Composite tools */}
+			<ServerComposite serverId={id} />
 
 			{/* Custom prompts */}
 			<ServerPrompts serverId={id} />

@@ -1,5 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+/**
+ * POST /api/servers/:id/tools — create a composite tool (a sequence of other
+ * tools). Body: { name, description?, arguments?, steps: [{tool, args}] }.
+ */
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
+	const supabase = await createServerSupabaseClient();
+	const { data: { user } } = await supabase.auth.getUser();
+	if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	const { data: owned } = await supabase.from('mcp_servers').select('id').eq('id', id).maybeSingle();
+	if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+	const body = await request.json().catch(() => ({}));
+	const name = String(body.name || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 60);
+	if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+	const steps = Array.isArray(body.steps) ? body.steps.filter((s: any) => s && s.tool) : [];
+	if (!steps.length) return NextResponse.json({ error: 'Add at least one step' }, { status: 400 });
+
+	// arguments -> JSON schema
+	let argList: any[] = [];
+	if (typeof body.arguments === 'string') argList = body.arguments.split(',').map((s: string) => ({ name: s.trim() }));
+	else if (Array.isArray(body.arguments)) argList = body.arguments;
+	const properties: Record<string, any> = {};
+	const required: string[] = [];
+	for (const a of argList) {
+		const n = (typeof a === 'string' ? a : a?.name || '').trim();
+		if (!n) continue;
+		properties[n] = { type: 'string' };
+		if (a?.required !== false) required.push(n);
+	}
+
+	const admin = createAdminClient();
+	const { data, error } = await admin
+		.from('mcp_tools')
+		.insert({
+			mcp_server_id: id,
+			name,
+			description: (body.description || '').slice(0, 500) || null,
+			input_schema: { type: 'object', properties, ...(required.length ? { required } : {}) },
+			http_method: 'POST',
+			path_template: '/',
+			param_map: [],
+			enabled: true,
+			composite_steps: steps.map((s: any) => ({ tool: String(s.tool), args: s.args && typeof s.args === 'object' ? s.args : {} })),
+		})
+		.select('id, name')
+		.single();
+
+	if (error) {
+		const msg = /composite_steps/.test(error.message)
+			? 'Composite tools need migration 023. Run it in your Supabase SQL editor.'
+			: error.message;
+		return NextResponse.json({ error: msg }, { status: 400 });
+	}
+
+	// keep enabled_tools in sync
+	const { data: enabled } = await admin.from('mcp_tools').select('name').eq('mcp_server_id', id).eq('enabled', true);
+	await admin.from('mcp_servers').update({ enabled_tools: (enabled || []).map((e: any) => e.name) }).eq('id', id);
+
+	return NextResponse.json(data, { status: 201 });
+}
 
 /** GET /api/servers/:id/tools — full tool list (with ids) for curation. */
 export async function GET(
