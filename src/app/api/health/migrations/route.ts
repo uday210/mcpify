@@ -28,6 +28,7 @@ export async function GET() {
 		probe('mcp_tools', 'requires_approval'),
 		probe('mcp_approvals', 'id'),
 		probe('mcp_tools', 'composite_steps'),
+		probe('kb_chunks', 'id'),
 	]);
 
 	const features = [
@@ -35,6 +36,7 @@ export async function GET() {
 		{ id: '021', label: 'Custom prompts', ok: checks[2] },
 		{ id: '022', label: 'Approvals (human-in-the-loop)', ok: checks[3] && checks[4] },
 		{ id: '023', label: 'Composite tools', ok: checks[5] },
+		{ id: '024', label: 'Knowledge bases (RAG)', ok: checks[6] },
 	];
 	const missing = features.filter((f) => !f.ok);
 
@@ -82,4 +84,16 @@ CREATE INDEX IF NOT EXISTS idx_mcp_approvals_pending ON mcp_approvals(mcp_server
 ALTER TABLE mcp_approvals ENABLE ROW LEVEL SECURITY;
 
 -- 023: composite tools
-ALTER TABLE mcp_tools ADD COLUMN IF NOT EXISTS composite_steps JSONB;`;
+ALTER TABLE mcp_tools ADD COLUMN IF NOT EXISTS composite_steps JSONB;
+
+-- 024: knowledge bases (RAG)
+CREATE TABLE IF NOT EXISTS kb_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id UUID REFERENCES app_connections(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  embedding JSONB NOT NULL DEFAULT '[]'::jsonb,
+  source TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_kb_chunks_connection ON kb_chunks(connection_id);
+ALTER TABLE kb_chunks ENABLE ROW LEVEL SECURITY;`;

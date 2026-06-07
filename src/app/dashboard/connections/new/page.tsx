@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle, Database } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle, Database, BookOpen } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { parseCurl } from '@/lib/connectors/curl';
 
-type ConnectorType = 'catalog' | 'openapi' | 'manual' | 'database';
+type ConnectorType = 'catalog' | 'openapi' | 'manual' | 'database' | 'knowledge';
 type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc' | 'oauth2_account' | 'token_path';
 
 interface CatalogApp {
@@ -305,6 +305,7 @@ export default function NewConnectionPage() {
 		{ v: 'openapi', label: 'OpenAPI', icon: FileJson },
 		{ v: 'manual', label: 'Manual', icon: Wrench },
 		{ v: 'database', label: 'Database', icon: Database },
+		{ v: 'knowledge', label: 'Knowledge', icon: BookOpen },
 	];
 
 	return (
@@ -333,7 +334,7 @@ export default function NewConnectionPage() {
 								onClick={() => {
 									setConnectorType(s.v);
 									setAppSlug('');
-									if (s.v === 'database') setAuthType('none');
+									if (s.v === 'database' || s.v === 'knowledge') setAuthType('none');
 									else if (s.v !== 'catalog') setAuthType('api_key');
 								}}
 								className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-lg transition ${
@@ -589,6 +590,15 @@ export default function NewConnectionPage() {
 								</div>
 							)}
 
+							{/* knowledge base */}
+							{connectorType === 'knowledge' && (
+								<div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600">
+									Create the knowledge base, then add documents (paste text or a URL) on its page. mcpify chunks +
+									embeds them using a connected LLM (OpenAI / Mistral / Together) and exposes a <span className="font-mono text-xs">search</span> tool.
+									<span className="block mt-1 text-xs text-slate-500">Tip: connect an embeddings provider under Settings → AI first.</span>
+								</div>
+							)}
+
 							{/* per-account base URL (Shopify store, Jira/Zendesk site…) */}
 							{connectorType === 'catalog' && selectedApp?.needs_base_url && (
 								<div>
@@ -609,8 +619,8 @@ export default function NewConnectionPage() {
 								<input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="My connection" />
 							</div>
 
-							{/* auth selector (non-catalog, non-database) */}
-							{connectorType !== 'catalog' && connectorType !== 'database' && (
+							{/* auth selector (non-catalog, non-database, non-knowledge) */}
+							{connectorType !== 'catalog' && connectorType !== 'database' && connectorType !== 'knowledge' && (
 								<div>
 									<label className={labelCls}>Authentication</label>
 									<select className={input} value={authType} onChange={(e) => setAuthType(e.target.value as AuthType)}>

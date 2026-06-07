@@ -7,6 +7,7 @@ import { ArrowLeft, RefreshCw, RotateCw, Trash2, CheckCircle2, XCircle, Plus, Se
 import AppIcon from '@/components/AppIcon';
 import { toast } from '@/components/Toaster';
 import { Skeleton } from '@/components/Skeleton';
+import ConnectionKB from '@/components/ConnectionKB';
 
 export default function ConnectionDetailPage() {
 	const params = useParams();
@@ -186,6 +187,8 @@ export default function ConnectionDetailPage() {
 					{tools.length === 0 && <p className="text-sm text-slate-400">No tools.</p>}
 				</div>
 			</div>
+
+			{conn.connector_type === 'knowledge' && <ConnectionKB connectionId={id} />}
 		</div>
 	);
 }

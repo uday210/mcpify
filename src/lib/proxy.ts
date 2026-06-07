@@ -215,6 +215,9 @@ export async function pingConnection(
 		const { pingDatabase } = await import('@/lib/connectors/database');
 		return pingDatabase(connection);
 	}
+	if (connection.connector_type === 'knowledge') {
+		return { ok: true, status: 200, message: 'Knowledge base ready — add documents on its page.' };
+	}
 	const baseUrl: string = (connection.base_url || '').replace(/\/$/, '');
 	if (!baseUrl) return { ok: false, status: 0, message: 'No base URL configured' };
 

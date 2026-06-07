@@ -2,6 +2,7 @@ import { encryptCredentials } from '@/lib/encryption';
 import { getCatalogConnector } from '@/lib/connectors/catalog';
 import { parseSpecString, GeneratedTool } from '@/lib/connectors/openapi-to-mcp';
 import { DATABASE_TOOLS } from '@/lib/connectors/database';
+import { KB_TOOLS } from '@/lib/connectors/kb';
 
 export interface BuildResult {
 	insert: Record<string, any>;
@@ -112,6 +113,9 @@ export async function buildConnectionInsert(
 		}
 		baseUrl = 'db://postgres';
 		tools = DATABASE_TOOLS;
+	} else if (connectorType === 'knowledge') {
+		baseUrl = 'kb://local';
+		tools = KB_TOOLS;
 	} else {
 		throw new Error(`Unknown connector type: ${connectorType}`);
 	}
