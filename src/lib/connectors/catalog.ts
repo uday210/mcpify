@@ -1622,6 +1622,168 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_invoices', 'List invoices.', 'GET', '/invoices', []),
 		],
 	},
+	gitea: {
+		baseUrl: '',
+		tools: [
+			tool('list_my_repos', 'List your repositories.', 'GET', '/user/repos', []),
+			tool('get_repo', 'Get a repository.', 'GET', '/repos/{owner}/{repo}', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+			]),
+			tool('list_issues', 'List issues in a repo.', 'GET', '/repos/{owner}/{repo}/issues', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'state', in: 'query', description: 'open | closed | all' },
+			]),
+			tool('create_issue', 'Create an issue.', 'POST', '/repos/{owner}/{repo}/issues', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"title":"Bug","body":"..."}' },
+			]),
+		],
+	},
+	jenkins: {
+		baseUrl: '',
+		tools: [
+			tool('overview', 'Server overview + top-level jobs.', 'GET', '/api/json', []),
+			tool('job', 'Get a job.', 'GET', '/job/{name}/api/json', [{ name: 'name', in: 'path', required: true }]),
+			tool('build', 'Trigger a build.', 'POST', '/job/{name}/build', [{ name: 'name', in: 'path', required: true }]),
+		],
+	},
+	mastodon: {
+		baseUrl: '',
+		tools: [
+			tool('verify_credentials', 'Get the authenticated account.', 'GET', '/api/v1/accounts/verify_credentials', []),
+			tool('home_timeline', 'Home timeline.', 'GET', '/api/v1/timelines/home', [{ name: 'limit', in: 'query' }]),
+			tool('post_status', 'Publish a status (toot).', 'POST', '/api/v1/statuses', [
+				{ name: 'status', in: 'query', required: true, description: 'Text to post' },
+				{ name: 'visibility', in: 'query', description: 'public | unlisted | private | direct' },
+			]),
+			tool('search', 'Search.', 'GET', '/api/v2/search', [{ name: 'q', in: 'query', required: true }]),
+		],
+	},
+	mailerlite: {
+		baseUrl: 'https://connect.mailerlite.com/api',
+		tools: [
+			tool('list_subscribers', 'List subscribers.', 'GET', '/subscribers', []),
+			tool('get_subscriber', 'Get a subscriber.', 'GET', '/subscribers/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_groups', 'List groups.', 'GET', '/groups', []),
+			tool('list_campaigns', 'List campaigns.', 'GET', '/campaigns', []),
+		],
+	},
+	activecampaign: {
+		baseUrl: '',
+		tools: [
+			tool('list_contacts', 'List contacts.', 'GET', '/api/3/contacts', [{ name: 'limit', in: 'query' }]),
+			tool('get_contact', 'Get a contact.', 'GET', '/api/3/contacts/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_deals', 'List deals.', 'GET', '/api/3/deals', []),
+			tool('list_lists', 'List lists.', 'GET', '/api/3/lists', []),
+		],
+	},
+	wise: {
+		baseUrl: 'https://api.wise.com',
+		tools: [
+			tool('list_profiles', 'List your profiles.', 'GET', '/v2/profiles', []),
+			tool('get_profile', 'Get a profile.', 'GET', '/v2/profiles/{profileId}', [{ name: 'profileId', in: 'path', required: true }]),
+		],
+	},
+	strapi: {
+		baseUrl: '',
+		tools: [
+			tool('list_entries', 'List entries in a collection.', 'GET', '/{collection}', [
+				{ name: 'collection', in: 'path', required: true, description: 'e.g. articles' },
+			]),
+			tool('get_entry', 'Get one entry.', 'GET', '/{collection}/{id}', [
+				{ name: 'collection', in: 'path', required: true },
+				{ name: 'id', in: 'path', required: true },
+			]),
+			tool('create_entry', 'Create an entry.', 'POST', '/{collection}', [
+				{ name: 'collection', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"data":{...}}' },
+			]),
+		],
+	},
+	directus: {
+		baseUrl: '',
+		tools: [
+			tool('list_collections', 'List collections.', 'GET', '/collections', []),
+			tool('list_items', 'List items in a collection.', 'GET', '/items/{collection}', [
+				{ name: 'collection', in: 'path', required: true },
+			]),
+			tool('get_item', 'Get one item.', 'GET', '/items/{collection}/{id}', [
+				{ name: 'collection', in: 'path', required: true },
+				{ name: 'id', in: 'path', required: true },
+			]),
+		],
+	},
+	meilisearch: {
+		baseUrl: '',
+		tools: [
+			tool('list_indexes', 'List indexes.', 'GET', '/indexes', []),
+			tool('search', 'Search an index.', 'POST', '/indexes/{index}/search', [
+				{ name: 'index', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"q":"hello","limit":10}' },
+			]),
+			tool('get_stats', 'Index/server stats.', 'GET', '/stats', []),
+		],
+	},
+	grafana: {
+		baseUrl: '',
+		tools: [
+			tool('health', 'Health check.', 'GET', '/api/health', []),
+			tool('search_dashboards', 'Search dashboards.', 'GET', '/api/search', [{ name: 'query', in: 'query' }]),
+			tool('list_datasources', 'List data sources.', 'GET', '/api/datasources', []),
+		],
+	},
+	jina: {
+		baseUrl: 'https://api.jina.ai/v1',
+		tools: [
+			tool('embeddings', 'Create embeddings.', 'POST', '/embeddings', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"jina-embeddings-v3","input":["hello"]}' },
+			]),
+			tool('rerank', 'Rerank documents against a query.', 'POST', '/rerank', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"jina-reranker-v2-base-multilingual","query":"q","documents":["a","b"]}' },
+			]),
+		],
+	},
+	xai: {
+		baseUrl: 'https://api.x.ai/v1',
+		tools: [
+			tool('list_models', 'List Grok models.', 'GET', '/models', []),
+			tool('chat_completion', 'Create a chat completion.', 'POST', '/chat/completions', [
+				{ name: 'body', in: 'body', required: true, description: '{"model":"grok-2-latest","messages":[{"role":"user","content":"Hi"}]}' },
+			]),
+		],
+	},
+	ghost: {
+		// Content API: ?key=<content api key>; per-blog base URL.
+		baseUrl: '',
+		tools: [
+			tool('list_posts', 'List published posts.', 'GET', '/ghost/api/content/posts/', [{ name: 'limit', in: 'query' }]),
+			tool('get_post', 'Get a post by slug.', 'GET', '/ghost/api/content/posts/slug/{slug}/', [{ name: 'slug', in: 'path', required: true }]),
+			tool('list_tags', 'List tags.', 'GET', '/ghost/api/content/tags/', []),
+		],
+	},
+	convertkit: {
+		baseUrl: 'https://api.convertkit.com/v3',
+		tools: [
+			tool('list_subscribers', 'List subscribers.', 'GET', '/subscribers', []),
+			tool('list_forms', 'List forms.', 'GET', '/forms', []),
+			tool('list_tags', 'List tags.', 'GET', '/tags', []),
+		],
+	},
+	wikipedia: {
+		baseUrl: 'https://en.wikipedia.org',
+		tools: [
+			tool('summary', 'Get a page summary.', 'GET', '/api/rest_v1/page/summary/{title}', [
+				{ name: 'title', in: 'path', required: true, description: 'Page title' },
+			]),
+			tool('search', 'Search articles.', 'GET', '/w/rest.php/v1/search/page', [
+				{ name: 'q', in: 'query', required: true, description: 'Search text' },
+				{ name: 'limit', in: 'query' },
+			]),
+		],
+	},
 };
 
 // QuickBooks sandbox shares the same tools but a different API base host.

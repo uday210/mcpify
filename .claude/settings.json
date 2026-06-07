@@ -43,7 +43,8 @@
       "Bash(sed -n '1,60p' src/app/page.tsx)",
       "Bash(sed -n '1,40p' src/app/dashboard/page.tsx)",
       "Bash(npx vitest *)",
-      "Bash(grep -n \"playground\\\\`}\\\\|Playground\\\\|href={\\\\`/dashboard/servers/\\\\${id}/playground\" \"src/app/dashboard/servers/[id]/page.tsx\")"
+      "Bash(grep -n \"playground\\\\`}\\\\|Playground\\\\|href={\\\\`/dashboard/servers/\\\\${id}/playground\" \"src/app/dashboard/servers/[id]/page.tsx\")",
+      "Bash(node scripts/seed-batch-15.mjs)"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
