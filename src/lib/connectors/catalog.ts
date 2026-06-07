@@ -36,12 +36,31 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://api.github.com',
 		tools: [
 			tool('get_authenticated_user', 'Get the authenticated GitHub user.', 'GET', '/user', []),
+			tool('get_user', 'Get a user by username.', 'GET', '/users/{username}', [{ name: 'username', in: 'path', required: true }]),
 			tool('list_my_repos', 'List repositories for the authenticated user.', 'GET', '/user/repos', [
 				{ name: 'per_page', in: 'query', type: 'integer', description: 'Results per page (max 100)' },
 				{ name: 'sort', in: 'query', description: 'created, updated, pushed, full_name' },
 				{ name: 'visibility', in: 'query', description: 'all, public, or private' },
 			]),
+			tool('list_org_repos', 'List an organization’s repositories.', 'GET', '/orgs/{org}/repos', [
+				{ name: 'org', in: 'path', required: true },
+				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
 			tool('get_repo', 'Get a repository by owner and name.', 'GET', '/repos/{owner}/{repo}', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+			]),
+			tool('list_branches', 'List a repo’s branches.', 'GET', '/repos/{owner}/{repo}/branches', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+			]),
+			tool('list_commits', 'List commits on a repo.', 'GET', '/repos/{owner}/{repo}/commits', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'sha', in: 'query', description: 'Branch or commit SHA' },
+				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
+			tool('get_readme', 'Get a repo’s README (base64).', 'GET', '/repos/{owner}/{repo}/readme', [
 				{ name: 'owner', in: 'path', required: true },
 				{ name: 'repo', in: 'path', required: true },
 			]),
@@ -49,16 +68,77 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'owner', in: 'path', required: true },
 				{ name: 'repo', in: 'path', required: true },
 				{ name: 'state', in: 'query', description: 'open, closed, or all' },
+				{ name: 'labels', in: 'query', description: 'comma-separated label names' },
+			]),
+			tool('get_issue', 'Get a single issue.', 'GET', '/repos/{owner}/{repo}/issues/{issue_number}', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'issue_number', in: 'path', required: true },
 			]),
 			tool('create_issue', 'Create an issue in a repository.', 'POST', '/repos/{owner}/{repo}/issues', [
 				{ name: 'owner', in: 'path', required: true },
 				{ name: 'repo', in: 'path', required: true },
 				{ name: 'title', in: 'body', required: true },
 				{ name: 'body', in: 'body', description: 'Issue body (markdown)' },
+				{ name: 'labels', in: 'body', type: 'array' },
+				{ name: 'assignees', in: 'body', type: 'array' },
+			]),
+			tool('update_issue', 'Update or close an issue.', 'PATCH', '/repos/{owner}/{repo}/issues/{issue_number}', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'issue_number', in: 'path', required: true },
+				{ name: 'title', in: 'body' },
+				{ name: 'body', in: 'body' },
+				{ name: 'state', in: 'body', description: 'open or closed' },
+			]),
+			tool('list_issue_comments', 'List comments on an issue.', 'GET', '/repos/{owner}/{repo}/issues/{issue_number}/comments', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'issue_number', in: 'path', required: true },
+			]),
+			tool('create_issue_comment', 'Comment on an issue or PR.', 'POST', '/repos/{owner}/{repo}/issues/{issue_number}/comments', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'issue_number', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true },
+			]),
+			tool('list_pull_requests', 'List pull requests.', 'GET', '/repos/{owner}/{repo}/pulls', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'state', in: 'query', description: 'open, closed, all' },
+			]),
+			tool('get_pull_request', 'Get a pull request.', 'GET', '/repos/{owner}/{repo}/pulls/{pull_number}', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'pull_number', in: 'path', required: true },
+			]),
+			tool('create_pull_request', 'Open a pull request.', 'POST', '/repos/{owner}/{repo}/pulls', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'title', in: 'body', required: true },
+				{ name: 'head', in: 'body', required: true, description: 'source branch' },
+				{ name: 'base', in: 'body', required: true, description: 'target branch' },
+				{ name: 'body', in: 'body' },
+			]),
+			tool('merge_pull_request', 'Merge a pull request.', 'PUT', '/repos/{owner}/{repo}/pulls/{pull_number}/merge', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
+				{ name: 'pull_number', in: 'path', required: true },
+				{ name: 'merge_method', in: 'body', description: 'merge, squash, or rebase' },
+			]),
+			tool('list_workflow_runs', 'List GitHub Actions runs.', 'GET', '/repos/{owner}/{repo}/actions/runs', [
+				{ name: 'owner', in: 'path', required: true },
+				{ name: 'repo', in: 'path', required: true },
 			]),
 			tool('search_repositories', 'Search public repositories.', 'GET', '/search/repositories', [
 				{ name: 'q', in: 'query', required: true, description: 'Search query' },
 				{ name: 'per_page', in: 'query', type: 'integer' },
+			]),
+			tool('search_code', 'Search code.', 'GET', '/search/code', [
+				{ name: 'q', in: 'query', required: true, description: 'e.g. addClass repo:owner/name' },
+			]),
+			tool('search_issues', 'Search issues and PRs.', 'GET', '/search/issues', [
+				{ name: 'q', in: 'query', required: true, description: 'e.g. is:open is:issue repo:owner/name' },
 			]),
 		],
 	},
@@ -69,18 +149,31 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'limit', in: 'query', type: 'integer', description: '1-100' },
 				{ name: 'email', in: 'query', description: 'Filter by email' },
 			]),
-			tool('get_customer', 'Retrieve a Stripe customer by id.', 'GET', '/v1/customers/{id}', [
-				{ name: 'id', in: 'path', required: true },
+			tool('get_customer', 'Retrieve a Stripe customer by id.', 'GET', '/v1/customers/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('search_customers', 'Search customers (query language).', 'GET', '/v1/customers/search', [
+				{ name: 'query', in: 'query', required: true, description: "e.g. email:'a@b.com'" },
 			]),
 			tool('list_charges', 'List recent charges.', 'GET', '/v1/charges', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_charge', 'Retrieve a charge.', 'GET', '/v1/charges/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_payment_intents', 'List payment intents.', 'GET', '/v1/payment_intents', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_payment_intent', 'Retrieve a payment intent.', 'GET', '/v1/payment_intents/{id}', [{ name: 'id', in: 'path', required: true }]),
 			tool('list_invoices', 'List invoices.', 'GET', '/v1/invoices', [
 				{ name: 'limit', in: 'query', type: 'integer' },
 				{ name: 'status', in: 'query', description: 'draft, open, paid, uncollectible, void' },
 			]),
+			tool('get_invoice', 'Retrieve an invoice.', 'GET', '/v1/invoices/{id}', [{ name: 'id', in: 'path', required: true }]),
 			tool('list_subscriptions', 'List subscriptions.', 'GET', '/v1/subscriptions', [
 				{ name: 'limit', in: 'query', type: 'integer' },
 				{ name: 'status', in: 'query' },
 			]),
+			tool('get_subscription', 'Retrieve a subscription.', 'GET', '/v1/subscriptions/{id}', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_products', 'List products.', 'GET', '/v1/products', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_prices', 'List prices.', 'GET', '/v1/prices', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_refunds', 'List refunds.', 'GET', '/v1/refunds', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_payouts', 'List payouts.', 'GET', '/v1/payouts', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_disputes', 'List disputes.', 'GET', '/v1/disputes', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_events', 'List recent events.', 'GET', '/v1/events', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_balance', 'Retrieve account balance.', 'GET', '/v1/balance', []),
 		],
 	},
 	openweather: {
@@ -101,17 +194,35 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('search', 'Search pages and databases.', 'POST', '/v1/search', [
 				{ name: 'query', in: 'body', description: 'Text to search for' },
+				{ name: 'filter', in: 'body', type: 'object', description: '{"property":"object","value":"page"}' },
 			]),
 			tool('list_users', 'List workspace users.', 'GET', '/v1/users', []),
-			tool('get_page', 'Retrieve a page by id.', 'GET', '/v1/pages/{page_id}', [
+			tool('get_user', 'Retrieve a user.', 'GET', '/v1/users/{user_id}', [{ name: 'user_id', in: 'path', required: true }]),
+			tool('get_page', 'Retrieve a page by id.', 'GET', '/v1/pages/{page_id}', [{ name: 'page_id', in: 'path', required: true }]),
+			tool('create_page', 'Create a page.', 'POST', '/v1/pages', [
+				{ name: 'body', in: 'body', required: true, description: '{"parent":{"database_id":"..."},"properties":{...}}' },
+			]),
+			tool('update_page', 'Update page properties or archive it.', 'PATCH', '/v1/pages/{page_id}', [
 				{ name: 'page_id', in: 'path', required: true },
+				{ name: 'properties', in: 'body', type: 'object' },
+				{ name: 'archived', in: 'body', type: 'boolean' },
 			]),
-			tool('get_database', 'Retrieve a database by id.', 'GET', '/v1/databases/{database_id}', [
-				{ name: 'database_id', in: 'path', required: true },
-			]),
+			tool('get_database', 'Retrieve a database by id.', 'GET', '/v1/databases/{database_id}', [{ name: 'database_id', in: 'path', required: true }]),
 			tool('query_database', 'Query rows in a database.', 'POST', '/v1/databases/{database_id}/query', [
 				{ name: 'database_id', in: 'path', required: true },
+				{ name: 'filter', in: 'body', type: 'object' },
+				{ name: 'sorts', in: 'body', type: 'array' },
 				{ name: 'page_size', in: 'body', type: 'integer' },
+			]),
+			tool('get_block_children', 'List a block/page’s child blocks.', 'GET', '/v1/blocks/{block_id}/children', [
+				{ name: 'block_id', in: 'path', required: true },
+			]),
+			tool('append_block_children', 'Append blocks to a page/block.', 'PATCH', '/v1/blocks/{block_id}/children', [
+				{ name: 'block_id', in: 'path', required: true },
+				{ name: 'children', in: 'body', required: true, type: 'array' },
+			]),
+			tool('create_comment', 'Add a comment to a page.', 'POST', '/v1/comments', [
+				{ name: 'body', in: 'body', required: true, description: '{"parent":{"page_id":"..."},"rich_text":[{"text":{"content":"hi"}}]}' },
 			]),
 		],
 	},
@@ -122,31 +233,73 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'types', in: 'query', description: 'public_channel,private_channel,im,mpim' },
 				{ name: 'limit', in: 'query', type: 'integer' },
 			]),
+			tool('conversations_info', 'Get a channel’s info.', 'GET', '/conversations.info', [{ name: 'channel', in: 'query', required: true }]),
 			tool('conversations_history', 'Fetch a channel’s messages.', 'GET', '/conversations.history', [
 				{ name: 'channel', in: 'query', required: true },
 				{ name: 'limit', in: 'query', type: 'integer' },
 			]),
+			tool('conversations_replies', 'Fetch a thread’s replies.', 'GET', '/conversations.replies', [
+				{ name: 'channel', in: 'query', required: true },
+				{ name: 'ts', in: 'query', required: true, description: 'Parent message ts' },
+			]),
+			tool('conversations_members', 'List members of a channel.', 'GET', '/conversations.members', [{ name: 'channel', in: 'query', required: true }]),
 			tool('post_message', 'Post a message to a channel.', 'POST', '/chat.postMessage', [
 				{ name: 'channel', in: 'body', required: true },
 				{ name: 'text', in: 'body', required: true },
+				{ name: 'thread_ts', in: 'body', description: 'Reply in a thread' },
+				{ name: 'blocks', in: 'body', type: 'array' },
+			]),
+			tool('update_message', 'Edit a message.', 'POST', '/chat.update', [
+				{ name: 'channel', in: 'body', required: true },
+				{ name: 'ts', in: 'body', required: true },
+				{ name: 'text', in: 'body', required: true },
+			]),
+			tool('delete_message', 'Delete a message.', 'POST', '/chat.delete', [
+				{ name: 'channel', in: 'body', required: true },
+				{ name: 'ts', in: 'body', required: true },
+			]),
+			tool('add_reaction', 'Add an emoji reaction.', 'POST', '/reactions.add', [
+				{ name: 'channel', in: 'body', required: true },
+				{ name: 'timestamp', in: 'body', required: true },
+				{ name: 'name', in: 'body', required: true, description: 'emoji name without colons' },
 			]),
 			tool('list_users', 'List workspace users.', 'GET', '/users.list', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('users_info', 'Get a user’s profile.', 'GET', '/users.info', [{ name: 'user', in: 'query', required: true }]),
+			tool('search_messages', 'Search messages (user token).', 'GET', '/search.messages', [{ name: 'query', in: 'query', required: true }]),
 		],
 	},
 	airtable: {
 		baseUrl: 'https://api.airtable.com/v0',
 		tools: [
 			tool('list_bases', 'List accessible bases.', 'GET', '/meta/bases', []),
+			tool('list_tables', 'List tables/fields in a base.', 'GET', '/meta/bases/{baseId}/tables', [{ name: 'baseId', in: 'path', required: true }]),
 			tool('list_records', 'List records in a table.', 'GET', '/{baseId}/{table}', [
 				{ name: 'baseId', in: 'path', required: true },
 				{ name: 'table', in: 'path', required: true, description: 'Table id or name' },
 				{ name: 'maxRecords', in: 'query', type: 'integer' },
 				{ name: 'view', in: 'query' },
+				{ name: 'filterByFormula', in: 'query', description: "e.g. {Status}='Done'" },
+			]),
+			tool('get_record', 'Get one record.', 'GET', '/{baseId}/{table}/{recordId}', [
+				{ name: 'baseId', in: 'path', required: true },
+				{ name: 'table', in: 'path', required: true },
+				{ name: 'recordId', in: 'path', required: true },
 			]),
 			tool('create_record', 'Create a record.', 'POST', '/{baseId}/{table}', [
 				{ name: 'baseId', in: 'path', required: true },
 				{ name: 'table', in: 'path', required: true },
 				{ name: 'fields', in: 'body', required: true, type: 'object' },
+			]),
+			tool('update_record', 'Update a record’s fields.', 'PATCH', '/{baseId}/{table}/{recordId}', [
+				{ name: 'baseId', in: 'path', required: true },
+				{ name: 'table', in: 'path', required: true },
+				{ name: 'recordId', in: 'path', required: true },
+				{ name: 'fields', in: 'body', required: true, type: 'object' },
+			]),
+			tool('delete_record', 'Delete a record.', 'DELETE', '/{baseId}/{table}/{recordId}', [
+				{ name: 'baseId', in: 'path', required: true },
+				{ name: 'table', in: 'path', required: true },
+				{ name: 'recordId', in: 'path', required: true },
 			]),
 		],
 	},
@@ -154,13 +307,26 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: 'https://api.hubapi.com',
 		tools: [
 			tool('list_contacts', 'List CRM contacts.', 'GET', '/crm/v3/objects/contacts', [{ name: 'limit', in: 'query', type: 'integer' }]),
-			tool('get_contact', 'Get a contact by id.', 'GET', '/crm/v3/objects/contacts/{contactId}', [
-				{ name: 'contactId', in: 'path', required: true },
-			]),
+			tool('get_contact', 'Get a contact by id.', 'GET', '/crm/v3/objects/contacts/{contactId}', [{ name: 'contactId', in: 'path', required: true }]),
 			tool('create_contact', 'Create a contact.', 'POST', '/crm/v3/objects/contacts', [
 				{ name: 'properties', in: 'body', required: true, type: 'object', description: 'e.g. { "email": "a@b.com" }' },
 			]),
+			tool('update_contact', 'Update a contact.', 'PATCH', '/crm/v3/objects/contacts/{contactId}', [
+				{ name: 'contactId', in: 'path', required: true },
+				{ name: 'properties', in: 'body', required: true, type: 'object' },
+			]),
+			tool('search_contacts', 'Search contacts.', 'POST', '/crm/v3/objects/contacts/search', [
+				{ name: 'body', in: 'body', required: true, description: '{"filterGroups":[{"filters":[{"propertyName":"email","operator":"EQ","value":"a@b.com"}]}]}' },
+			]),
+			tool('list_companies', 'List companies.', 'GET', '/crm/v3/objects/companies', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_company', 'Get a company.', 'GET', '/crm/v3/objects/companies/{companyId}', [{ name: 'companyId', in: 'path', required: true }]),
 			tool('list_deals', 'List CRM deals.', 'GET', '/crm/v3/objects/deals', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_deal', 'Get a deal.', 'GET', '/crm/v3/objects/deals/{dealId}', [{ name: 'dealId', in: 'path', required: true }]),
+			tool('create_deal', 'Create a deal.', 'POST', '/crm/v3/objects/deals', [
+				{ name: 'properties', in: 'body', required: true, type: 'object', description: 'e.g. { "dealname": "New deal", "amount": "1000" }' },
+			]),
+			tool('list_tickets', 'List support tickets.', 'GET', '/crm/v3/objects/tickets', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('list_owners', 'List CRM owners/users.', 'GET', '/crm/v3/owners', []),
 		],
 	},
 	gitlab: {
@@ -175,18 +341,52 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'id', in: 'path', required: true },
 				{ name: 'state', in: 'query', description: 'opened or closed' },
 			]),
+			tool('get_issue', 'Get one issue.', 'GET', '/projects/{id}/issues/{issue_iid}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'issue_iid', in: 'path', required: true },
+			]),
+			tool('create_issue', 'Create an issue.', 'POST', '/projects/{id}/issues', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'title', in: 'body', required: true },
+				{ name: 'description', in: 'body' },
+				{ name: 'labels', in: 'body', description: 'comma-separated' },
+			]),
+			tool('list_merge_requests', 'List merge requests.', 'GET', '/projects/{id}/merge_requests', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'state', in: 'query', description: 'opened, closed, merged, all' },
+			]),
+			tool('get_merge_request', 'Get a merge request.', 'GET', '/projects/{id}/merge_requests/{mr_iid}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'mr_iid', in: 'path', required: true },
+			]),
+			tool('create_merge_request', 'Open a merge request.', 'POST', '/projects/{id}/merge_requests', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'source_branch', in: 'body', required: true },
+				{ name: 'target_branch', in: 'body', required: true },
+				{ name: 'title', in: 'body', required: true },
+			]),
+			tool('list_branches', 'List branches.', 'GET', '/projects/{id}/repository/branches', [{ name: 'id', in: 'path', required: true }]),
+			tool('list_commits', 'List commits.', 'GET', '/projects/{id}/repository/commits', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'ref_name', in: 'query' },
+			]),
+			tool('list_pipelines', 'List CI pipelines.', 'GET', '/projects/{id}/pipelines', [{ name: 'id', in: 'path', required: true }]),
 		],
 	},
 	sendgrid: {
 		baseUrl: 'https://api.sendgrid.com/v3',
 		tools: [
-			tool('list_templates', 'List email templates.', 'GET', '/templates', [
-				{ name: 'generations', in: 'query', description: 'legacy or dynamic' },
+			tool('send_mail', 'Send an email.', 'POST', '/mail/send', [
+				{ name: 'body', in: 'body', required: true, description: '{"personalizations":[{"to":[{"email":"a@b.com"}]}],"from":{"email":"you@d.com"},"subject":"Hi","content":[{"type":"text/plain","value":"Hello"}]}' },
 			]),
+			tool('list_templates', 'List email templates.', 'GET', '/templates', [{ name: 'generations', in: 'query', description: 'legacy or dynamic' }]),
 			tool('get_stats', 'Email statistics.', 'GET', '/stats', [
 				{ name: 'start_date', in: 'query', required: true, description: 'YYYY-MM-DD' },
 				{ name: 'end_date', in: 'query', description: 'YYYY-MM-DD' },
 			]),
+			tool('list_bounces', 'List bounced addresses.', 'GET', '/suppression/bounces', []),
+			tool('list_marketing_contacts', 'List marketing contacts (sample).', 'GET', '/marketing/contacts', []),
+			tool('get_account', 'Account type + reputation.', 'GET', '/user/account', []),
 		],
 	},
 	resend: {
@@ -228,11 +428,25 @@ export const CATALOG: Record<string, CatalogConnector> = {
 				{ name: 'project_id', in: 'query' },
 				{ name: 'filter', in: 'query', description: 'e.g. "today"' },
 			]),
+			tool('get_task', 'Get a task.', 'GET', '/tasks/{id}', [{ name: 'id', in: 'path', required: true }]),
 			tool('create_task', 'Create a task.', 'POST', '/tasks', [
 				{ name: 'content', in: 'body', required: true, description: 'Task text' },
+				{ name: 'description', in: 'body' },
+				{ name: 'project_id', in: 'body' },
+				{ name: 'priority', in: 'body', type: 'integer', description: '1-4' },
 				{ name: 'due_string', in: 'body', description: 'e.g. "tomorrow 9am"' },
 			]),
+			tool('update_task', 'Update a task.', 'POST', '/tasks/{id}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'content', in: 'body' },
+				{ name: 'due_string', in: 'body' },
+				{ name: 'priority', in: 'body', type: 'integer' },
+			]),
+			tool('close_task', 'Complete a task.', 'POST', '/tasks/{id}/close', [{ name: 'id', in: 'path', required: true }]),
+			tool('reopen_task', 'Reopen a task.', 'POST', '/tasks/{id}/reopen', [{ name: 'id', in: 'path', required: true }]),
 			tool('get_projects', 'List projects.', 'GET', '/projects', []),
+			tool('create_project', 'Create a project.', 'POST', '/projects', [{ name: 'name', in: 'body', required: true }]),
+			tool('get_labels', 'List labels.', 'GET', '/labels', []),
 		],
 	},
 	asana: {
@@ -241,6 +455,20 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('get_me', 'Get the authenticated user.', 'GET', '/users/me', []),
 			tool('list_workspaces', 'List workspaces.', 'GET', '/workspaces', []),
 			tool('list_projects', 'List projects in a workspace.', 'GET', '/projects', [{ name: 'workspace', in: 'query' }]),
+			tool('get_project', 'Get a project.', 'GET', '/projects/{project_gid}', [{ name: 'project_gid', in: 'path', required: true }]),
+			tool('list_tasks', 'List tasks in a project.', 'GET', '/projects/{project_gid}/tasks', [{ name: 'project_gid', in: 'path', required: true }]),
+			tool('get_task', 'Get a task.', 'GET', '/tasks/{task_gid}', [{ name: 'task_gid', in: 'path', required: true }]),
+			tool('create_task', 'Create a task.', 'POST', '/tasks', [
+				{ name: 'data', in: 'body', required: true, type: 'object', description: '{"name":"Do it","projects":["<gid>"]}' },
+			]),
+			tool('update_task', 'Update a task.', 'PUT', '/tasks/{task_gid}', [
+				{ name: 'task_gid', in: 'path', required: true },
+				{ name: 'data', in: 'body', required: true, type: 'object', description: '{"completed":true}' },
+			]),
+			tool('add_comment', 'Comment on a task.', 'POST', '/tasks/{task_gid}/stories', [
+				{ name: 'task_gid', in: 'path', required: true },
+				{ name: 'data', in: 'body', required: true, type: 'object', description: '{"text":"Nice"}' },
+			]),
 		],
 	},
 	calendly: {
@@ -353,6 +581,22 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('get_me', 'Get the bot/user.', 'GET', '/users/@me', []),
 			tool('list_guilds', 'List the bot/user’s servers.', 'GET', '/users/@me/guilds', []),
+			tool('get_guild', 'Get a guild (server).', 'GET', '/guilds/{guild_id}', [{ name: 'guild_id', in: 'path', required: true }]),
+			tool('list_channels', 'List a guild’s channels.', 'GET', '/guilds/{guild_id}/channels', [{ name: 'guild_id', in: 'path', required: true }]),
+			tool('get_channel', 'Get a channel.', 'GET', '/channels/{channel_id}', [{ name: 'channel_id', in: 'path', required: true }]),
+			tool('list_messages', 'List a channel’s messages.', 'GET', '/channels/{channel_id}/messages', [
+				{ name: 'channel_id', in: 'path', required: true },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('create_message', 'Post a message to a channel.', 'POST', '/channels/{channel_id}/messages', [
+				{ name: 'channel_id', in: 'path', required: true },
+				{ name: 'content', in: 'body', required: true },
+			]),
+			tool('list_members', 'List guild members.', 'GET', '/guilds/{guild_id}/members', [
+				{ name: 'guild_id', in: 'path', required: true },
+				{ name: 'limit', in: 'query', type: 'integer' },
+			]),
+			tool('get_user', 'Get a user by id.', 'GET', '/users/{user_id}', [{ name: 'user_id', in: 'path', required: true }]),
 		],
 	},
 	newsapi: {
@@ -396,7 +640,31 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		tools: [
 			tool('get_authorized_user', 'Get the authorized user.', 'GET', '/user', []),
 			tool('get_teams', 'List workspaces (teams).', 'GET', '/team', []),
-			tool('get_tasks', 'List tasks in a list.', 'GET', '/list/{list_id}/task', [{ name: 'list_id', in: 'path', required: true }]),
+			tool('get_spaces', 'List spaces in a workspace.', 'GET', '/team/{team_id}/space', [{ name: 'team_id', in: 'path', required: true }]),
+			tool('get_folders', 'List folders in a space.', 'GET', '/space/{space_id}/folder', [{ name: 'space_id', in: 'path', required: true }]),
+			tool('get_lists', 'List lists in a folder.', 'GET', '/folder/{folder_id}/list', [{ name: 'folder_id', in: 'path', required: true }]),
+			tool('get_tasks', 'List tasks in a list.', 'GET', '/list/{list_id}/task', [
+				{ name: 'list_id', in: 'path', required: true },
+				{ name: 'archived', in: 'query', description: 'true/false' },
+			]),
+			tool('get_task', 'Get a task.', 'GET', '/task/{task_id}', [{ name: 'task_id', in: 'path', required: true }]),
+			tool('create_task', 'Create a task in a list.', 'POST', '/list/{list_id}/task', [
+				{ name: 'list_id', in: 'path', required: true },
+				{ name: 'name', in: 'body', required: true },
+				{ name: 'description', in: 'body' },
+				{ name: 'priority', in: 'body', type: 'integer', description: '1 (urgent) – 4 (low)' },
+				{ name: 'due_date', in: 'body', type: 'integer', description: 'Unix ms' },
+			]),
+			tool('update_task', 'Update a task.', 'PUT', '/task/{task_id}', [
+				{ name: 'task_id', in: 'path', required: true },
+				{ name: 'name', in: 'body' },
+				{ name: 'status', in: 'body' },
+				{ name: 'description', in: 'body' },
+			]),
+			tool('create_comment', 'Comment on a task.', 'POST', '/task/{task_id}/comment', [
+				{ name: 'task_id', in: 'path', required: true },
+				{ name: 'comment_text', in: 'body', required: true },
+			]),
 		],
 	},
 	monday: {
@@ -1350,18 +1618,47 @@ export const CATALOG: Record<string, CatalogConnector> = {
 		baseUrl: '',
 		tools: [
 			tool('list_products', 'List products.', 'GET', '/products.json', [{ name: 'limit', in: 'query', type: 'integer' }]),
+			tool('get_product', 'Get a product.', 'GET', '/products/{id}.json', [{ name: 'id', in: 'path', required: true }]),
+			tool('create_product', 'Create a product.', 'POST', '/products.json', [
+				{ name: 'body', in: 'body', required: true, description: '{"product":{"title":"Tee","body_html":"..."}}' },
+			]),
 			tool('list_orders', 'List orders.', 'GET', '/orders.json', [{ name: 'status', in: 'query', description: 'any, open, closed' }]),
+			tool('get_order', 'Get an order.', 'GET', '/orders/{id}.json', [{ name: 'id', in: 'path', required: true }]),
 			tool('list_customers', 'List customers.', 'GET', '/customers.json', []),
+			tool('get_customer', 'Get a customer.', 'GET', '/customers/{id}.json', [{ name: 'id', in: 'path', required: true }]),
+			tool('search_customers', 'Search customers.', 'GET', '/customers/search.json', [{ name: 'query', in: 'query', required: true, description: 'e.g. email:a@b.com' }]),
+			tool('list_draft_orders', 'List draft orders.', 'GET', '/draft_orders.json', []),
+			tool('list_collections', 'List custom collections.', 'GET', '/custom_collections.json', []),
+			tool('get_shop', 'Get shop details.', 'GET', '/shop.json', []),
 		],
 	},
 	jira: {
 		baseUrl: '',
 		tools: [
+			tool('myself', 'Get the current user.', 'GET', '/rest/api/3/myself', []),
 			tool('search_issues', 'Search issues with JQL.', 'GET', '/rest/api/3/search', [
 				{ name: 'jql', in: 'query', required: true, description: 'e.g. project = ABC ORDER BY created DESC' },
+				{ name: 'maxResults', in: 'query', type: 'integer' },
 			]),
 			tool('get_issue', 'Get an issue by key.', 'GET', '/rest/api/3/issue/{key}', [{ name: 'key', in: 'path', required: true }]),
-			tool('list_projects', 'List projects.', 'GET', '/rest/api/3/project', []),
+			tool('create_issue', 'Create an issue.', 'POST', '/rest/api/3/issue', [
+				{ name: 'body', in: 'body', required: true, description: '{"fields":{"project":{"key":"ABC"},"summary":"Bug","issuetype":{"name":"Task"}}}' },
+			]),
+			tool('update_issue', 'Update an issue.', 'PUT', '/rest/api/3/issue/{key}', [
+				{ name: 'key', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"fields":{"summary":"New title"}}' },
+			]),
+			tool('list_comments', 'List an issue’s comments.', 'GET', '/rest/api/3/issue/{key}/comment', [{ name: 'key', in: 'path', required: true }]),
+			tool('add_comment', 'Comment on an issue.', 'POST', '/rest/api/3/issue/{key}/comment', [
+				{ name: 'key', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"body":{"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":"hi"}]}]}}' },
+			]),
+			tool('list_transitions', 'List available transitions.', 'GET', '/rest/api/3/issue/{key}/transitions', [{ name: 'key', in: 'path', required: true }]),
+			tool('transition_issue', 'Transition an issue (change status).', 'POST', '/rest/api/3/issue/{key}/transitions', [
+				{ name: 'key', in: 'path', required: true },
+				{ name: 'body', in: 'body', required: true, description: '{"transition":{"id":"31"}}' },
+			]),
+			tool('list_projects', 'List projects.', 'GET', '/rest/api/3/project/search', []),
 		],
 	},
 	zendesk: {
