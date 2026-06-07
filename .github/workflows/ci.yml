@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Placeholder env so the production build never trips on a missing var
+    # (real values live in Railway / .env.local; these are only used at build).
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-key
+      CREDENTIALS_ENCRYPTION_KEY: ci-credentials-key-placeholder-0123456789
+      JWT_SECRET: ci-jwt-secret-placeholder-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Type-check
+        run: npm run type-check
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
