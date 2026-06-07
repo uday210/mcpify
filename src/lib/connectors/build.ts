@@ -53,6 +53,7 @@ export async function buildConnectionInsert(
 		if (def.config?.api_key_name) config.api_key_name = def.config.api_key_name;
 		if (def.config?.static_headers) config.static_headers = def.config.static_headers;
 		if (def.config?.token_path_template) config.token_path_template = def.config.token_path_template;
+		if (def.config?.body_encoding) config.body_encoding = def.config.body_encoding;
 
 		// Per-tenant OAuth domain (Salesforce My Domain/sandbox, GitLab self-managed,
 		// etc.): the user supplies their login/instance URL, templated into the

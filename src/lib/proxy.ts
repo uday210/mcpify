@@ -1,5 +1,6 @@
 import { decryptCredentials, encryptCredentials } from '@/lib/encryption';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { formEncode } from '@/lib/connectors/formencode';
 
 interface ToolDef {
 	name: string;
@@ -117,13 +118,18 @@ export async function executeTool(
 		const qs = query.toString();
 		const url = `${baseUrl}${path.startsWith('/') ? path : '/' + path}${qs ? '?' + qs : ''}`;
 
+		// Some APIs (Stripe, Twilio, Mailgun) require form-encoded bodies.
+		const useForm = (connection.config || {}).body_encoding === 'form';
 		const init: RequestInit = { method, headers };
-		if (rawBody !== undefined && writeMethod) {
-			headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-			init.body = JSON.stringify(rawBody);
-		} else if (hasBody && writeMethod) {
-			headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-			init.body = JSON.stringify(body);
+		const payload = rawBody !== undefined ? rawBody : hasBody ? body : undefined;
+		if (payload !== undefined && writeMethod) {
+			if (useForm) {
+				headers['Content-Type'] = headers['Content-Type'] || 'application/x-www-form-urlencoded';
+				init.body = formEncode(payload);
+			} else {
+				headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+				init.body = JSON.stringify(payload);
+			}
 		}
 
 		const timeoutMs = Number((connection.config || {}).timeout_ms) || DEFAULT_TIMEOUT_MS;

@@ -174,6 +174,32 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('list_disputes', 'List disputes.', 'GET', '/v1/disputes', [{ name: 'limit', in: 'query', type: 'integer' }]),
 			tool('list_events', 'List recent events.', 'GET', '/v1/events', [{ name: 'limit', in: 'query', type: 'integer' }]),
 			tool('get_balance', 'Retrieve account balance.', 'GET', '/v1/balance', []),
+			tool('create_customer', 'Create a customer.', 'POST', '/v1/customers', [
+				{ name: 'email', in: 'body' },
+				{ name: 'name', in: 'body' },
+				{ name: 'description', in: 'body' },
+				{ name: 'metadata', in: 'body', type: 'object' },
+			]),
+			tool('update_customer', 'Update a customer.', 'POST', '/v1/customers/{id}', [
+				{ name: 'id', in: 'path', required: true },
+				{ name: 'email', in: 'body' },
+				{ name: 'name', in: 'body' },
+				{ name: 'metadata', in: 'body', type: 'object' },
+			]),
+			tool('create_payment_intent', 'Create a payment intent.', 'POST', '/v1/payment_intents', [
+				{ name: 'amount', in: 'body', required: true, type: 'integer', description: 'In the smallest currency unit (cents)' },
+				{ name: 'currency', in: 'body', required: true, description: 'e.g. usd' },
+				{ name: 'customer', in: 'body' },
+				{ name: 'description', in: 'body' },
+			]),
+			tool('create_refund', 'Refund a charge or payment intent.', 'POST', '/v1/refunds', [
+				{ name: 'charge', in: 'body', description: 'Charge id (or use payment_intent)' },
+				{ name: 'payment_intent', in: 'body' },
+				{ name: 'amount', in: 'body', type: 'integer' },
+			]),
+			tool('create_payment_link', 'Create a payment link.', 'POST', '/v1/payment_links', [
+				{ name: 'line_items', in: 'body', required: true, type: 'array', description: '[{"price":"price_xxx","quantity":1}]' },
+			]),
 		],
 	},
 	openweather: {
@@ -579,6 +605,12 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			]),
 			tool('get_account', 'Account details.', 'GET', '/2010-04-01/Accounts/{AccountSid}.json', [
 				{ name: 'AccountSid', in: 'path', required: true },
+			]),
+			tool('send_sms', 'Send an SMS.', 'POST', '/2010-04-01/Accounts/{AccountSid}/Messages.json', [
+				{ name: 'AccountSid', in: 'path', required: true },
+				{ name: 'To', in: 'body', required: true, description: 'E.164, e.g. +15551234567' },
+				{ name: 'From', in: 'body', required: true, description: 'Your Twilio number' },
+				{ name: 'Body', in: 'body', required: true, description: 'Message text' },
 			]),
 		],
 	},
@@ -2174,6 +2206,14 @@ export const CATALOG: Record<string, CatalogConnector> = {
 			tool('get_domain', 'Get a domain.', 'GET', '/domains/{domain}', [{ name: 'domain', in: 'path', required: true }]),
 			tool('domain_events', 'Recent events for a domain.', 'GET', '/{domain}/events', [{ name: 'domain', in: 'path', required: true }]),
 			tool('list_mailing_lists', 'List mailing lists.', 'GET', '/lists/pages', []),
+			tool('send_message', 'Send an email.', 'POST', '/{domain}/messages', [
+				{ name: 'domain', in: 'path', required: true, description: 'Your sending domain' },
+				{ name: 'from', in: 'body', required: true, description: 'e.g. you@domain.com' },
+				{ name: 'to', in: 'body', required: true, description: 'recipient(s)' },
+				{ name: 'subject', in: 'body', required: true },
+				{ name: 'text', in: 'body', description: 'Plain-text body' },
+				{ name: 'html', in: 'body', description: 'HTML body' },
+			]),
 		],
 	},
 	confluence: {
