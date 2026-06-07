@@ -9,6 +9,22 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_STEPS = 6;
+const DEFAULT_MAX_TOKENS = 1024;
+const DAILY_RUN_CAP = Number(process.env.PLAYGROUND_DAILY_CAP || 300);
+
+// In-memory per-user daily run counter (single-instance; resets on the date roll).
+const runCounter = new Map<string, { day: string; count: number }>();
+function underDailyCap(userId: string): boolean {
+	const day = new Date().toISOString().slice(0, 10);
+	const cur = runCounter.get(userId);
+	if (!cur || cur.day !== day) {
+		runCounter.set(userId, { day, count: 1 });
+		return true;
+	}
+	if (cur.count >= DAILY_RUN_CAP) return false;
+	cur.count++;
+	return true;
+}
 
 /**
  * POST /api/servers/:id/playground — run a tool-calling chat loop against the
@@ -26,6 +42,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 	// Ownership check via RLS.
 	const { data: ownedServer } = await supabase.from('mcp_servers').select('id, name').eq('id', id).maybeSingle();
 	if (!ownedServer) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+	// Cost guard: cap playground runs per user per day.
+	if (!underDailyCap(user.id)) {
+		return NextResponse.json({ error: `Daily Playground limit reached (${DAILY_RUN_CAP} runs). Try again tomorrow.` }, { status: 429 });
+	}
 
 	const body = await request.json().catch(() => ({}));
 	const inputMessages: any[] = Array.isArray(body.messages) ? body.messages : [];
@@ -97,7 +118,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			const resp = await fetch(chatUrl, {
 				method: 'POST',
 				headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-				body: JSON.stringify({ model, messages, tools: openaiTools.length ? openaiTools : undefined, tool_choice: openaiTools.length ? 'auto' : undefined }),
+				body: JSON.stringify({
+					model,
+					messages,
+					tools: openaiTools.length ? openaiTools : undefined,
+					tool_choice: openaiTools.length ? 'auto' : undefined,
+					max_tokens: Number(body.maxTokens) || DEFAULT_MAX_TOKENS,
+				}),
 			});
 			const data = await resp.json();
 			if (!resp.ok) {

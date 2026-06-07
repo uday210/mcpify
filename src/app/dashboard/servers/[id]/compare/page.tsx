@@ -47,6 +47,7 @@ export default function ComparePage() {
 	const send = async () => {
 		const text = input.trim();
 		if (!text || selected.length === 0) return;
+		if (selected.length >= 3 && !confirm(`Run this prompt against ${selected.length} models? That's ${selected.length}× the LLM usage on your keys.`)) return;
 		setInput('');
 		const userTurn: Turn = { role: 'user', content: text };
 		// Append the user message to every selected column up front.
