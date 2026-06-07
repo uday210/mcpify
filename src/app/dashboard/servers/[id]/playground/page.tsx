@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Send, Wrench, Sparkles, Loader2 } from 'lucide-react';
+import { getPrefs } from '@/lib/preferences';
 
 interface Turn {
 	role: 'user' | 'assistant' | 'tool';
@@ -41,10 +42,11 @@ export default function PlaygroundPage() {
 		try {
 			// Send prior user/assistant text as context.
 			const history = next.filter((t) => t.role === 'user' || (t.role === 'assistant' && t.content)).map((t) => ({ role: t.role, content: t.content }));
+			const prefs = getPrefs();
 			const r = await fetch(`/api/servers/${id}/playground`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ messages: history }),
+				body: JSON.stringify({ messages: history, connectionId: prefs.llmConnectionId || undefined, model: prefs.llmModel || undefined }),
 			});
 			const d = await r.json();
 			if (!r.ok) {
@@ -95,7 +97,14 @@ export default function PlaygroundPage() {
 					<div ref={endRef} />
 				</div>
 
-				{error && <div className="mx-4 mb-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+				{error && (
+					<div className="mx-4 mb-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+						<span>{error}</span>
+						{/No connected LLM/i.test(error) && (
+							<Link href="/dashboard/settings" className="shrink-0 px-2 py-1 rounded-md bg-red-600 text-white font-medium hover:bg-red-700">Settings → AI</Link>
+						)}
+					</div>
+				)}
 
 				<div className="border-t border-slate-100 p-3 flex items-end gap-2">
 					<textarea

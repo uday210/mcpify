@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send, Building2, Download, Upload, Trash2, Plug, Server, Activity } from 'lucide-react';
+import { User, ShieldCheck, SlidersHorizontal, KeyRound, Copy, Check, RefreshCw, Lock, Bell, Send, Building2, Download, Upload, Trash2, Plug, Server, Activity, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/Toaster';
 import { getPrefs, setPrefs, type Preferences } from '@/lib/preferences';
 
-type Tab = 'account' | 'organization' | 'security' | 'preferences' | 'notifications';
+type Tab = 'account' | 'organization' | 'ai' | 'security' | 'preferences' | 'notifications';
 
 const input =
 	'w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none';
@@ -18,6 +18,7 @@ export default function SettingsPage() {
 	const tabs: { id: Tab; label: string; icon: any }[] = [
 		{ id: 'account', label: 'Account', icon: User },
 		{ id: 'organization', label: 'Organization', icon: Building2 },
+		{ id: 'ai', label: 'AI / LLM', icon: Sparkles },
 		{ id: 'security', label: 'Security & keys', icon: ShieldCheck },
 		{ id: 'notifications', label: 'Notifications', icon: Bell },
 		{ id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
@@ -50,6 +51,7 @@ export default function SettingsPage() {
 				<div className="flex-1 min-w-0 max-w-2xl">
 					{tab === 'account' && <AccountTab />}
 					{tab === 'organization' && <OrganizationTab />}
+					{tab === 'ai' && <AiTab />}
 					{tab === 'security' && <SecurityTab />}
 					{tab === 'notifications' && <NotificationsTab />}
 					{tab === 'preferences' && <PreferencesTab />}
@@ -459,6 +461,122 @@ function SecurityTab() {
 						))}
 					</div>
 				)}
+			</Section>
+		</>
+	);
+}
+
+function AiTab() {
+	const [providers, setProviders] = useState<any[]>([]);
+	const [keys, setKeys] = useState<Record<string, string>>({});
+	const [busy, setBusy] = useState<string | null>(null);
+	const [prefs, setLocalPrefs] = useState<Preferences | null>(null);
+
+	const load = () =>
+		fetch('/api/llm')
+			.then((r) => r.json())
+			.then((d) => setProviders(d.providers || []))
+			.catch(() => {});
+
+	useEffect(() => {
+		load();
+		setLocalPrefs(getPrefs());
+	}, []);
+
+	const connect = async (slug: string) => {
+		const apiKey = keys[slug];
+		if (!apiKey) return toast('Paste an API key first', 'error');
+		setBusy(slug);
+		const r = await fetch('/api/llm', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ slug, apiKey }),
+		});
+		const d = await r.json();
+		setBusy(null);
+		if (!r.ok) return toast(d.error || 'Could not connect', 'error');
+		toast('Connected', 'success');
+		setKeys((k) => ({ ...k, [slug]: '' }));
+		// auto-select as default if none chosen
+		if (prefs && !prefs.llmConnectionId) chooseDefault(d.connectionId, '');
+		load();
+	};
+
+	const disconnect = async (connectionId: string) => {
+		if (!confirm('Disconnect this LLM?')) return;
+		await fetch(`/api/connections/${connectionId}`, { method: 'DELETE' });
+		if (prefs?.llmConnectionId === connectionId) chooseDefault(null, '');
+		toast('Disconnected', 'success');
+		load();
+	};
+
+	const chooseDefault = (connectionId: string | null, model: string) => {
+		const next = setPrefs({ llmConnectionId: connectionId, llmModel: model });
+		setLocalPrefs(next);
+	};
+
+	const connected = providers.filter((p) => p.connected);
+
+	return (
+		<>
+			<Section title="Playground model" desc="Pick which connected LLM the in-app Playground uses to drive your tools.">
+				{connected.length === 0 ? (
+					<p className="text-sm text-slate-400">Connect a provider below first.</p>
+				) : (
+					<div className="space-y-2">
+						{connected.map((p) => {
+							const isDefault = prefs?.llmConnectionId === p.connectionId;
+							return (
+								<label key={p.slug} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${isDefault ? 'border-cyan-400 bg-cyan-50/50' : 'border-slate-200 hover:bg-slate-50'}`}>
+									<input type="radio" name="defaultLlm" checked={isDefault} onChange={() => chooseDefault(p.connectionId, '')} className="accent-cyan-600" />
+									<div className="flex-1">
+										<div className="text-sm font-medium text-slate-800">{p.name}</div>
+										<div className="text-xs text-slate-400">default model: {p.defaultModel}</div>
+									</div>
+									{isDefault && (
+										<input
+											value={prefs?.llmModel || ''}
+											onChange={(e) => chooseDefault(p.connectionId, e.target.value)}
+											placeholder={p.defaultModel}
+											className="w-48 px-2 py-1.5 text-xs rounded-lg border border-slate-200 outline-none focus:border-cyan-400 font-mono"
+										/>
+									)}
+								</label>
+							);
+						})}
+					</div>
+				)}
+			</Section>
+
+			<Section title="Providers" desc="Connect any OpenAI-compatible provider with an API key. Keys are encrypted at rest.">
+				<div className="space-y-2">
+					{providers.map((p) => (
+						<div key={p.slug} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+							<div className="w-28 shrink-0">
+								<div className="text-sm font-medium text-slate-800">{p.name}</div>
+								{p.connected ? <span className="text-xs text-emerald-600">Connected</span> : <span className="text-xs text-slate-400">Not connected</span>}
+							</div>
+							{p.connected ? (
+								<button onClick={() => disconnect(p.connectionId)} className="ml-auto px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition">
+									Disconnect
+								</button>
+							) : (
+								<div className="flex-1 flex items-center gap-2">
+									<input
+										type="password"
+										value={keys[p.slug] || ''}
+										onChange={(e) => setKeys((k) => ({ ...k, [p.slug]: e.target.value }))}
+										placeholder={`${p.name} API key`}
+										className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:border-cyan-400"
+									/>
+									<button onClick={() => connect(p.slug)} disabled={busy === p.slug} className="px-3 py-2 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition disabled:opacity-50">
+										{busy === p.slug ? 'Connecting…' : 'Connect'}
+									</button>
+								</div>
+							)}
+						</div>
+					))}
+				</div>
 			</Section>
 		</>
 	);

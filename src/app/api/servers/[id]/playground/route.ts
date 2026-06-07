@@ -3,19 +3,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { decryptCredentials } from '@/lib/encryption';
 import { executeTool } from '@/lib/proxy';
+import { DEFAULT_MODELS, LLM_SLUGS } from '@/lib/llm';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-// OpenAI-compatible chat-completions providers we can drive as the "brain".
-const PROVIDERS: Record<string, string> = {
-	openai: 'gpt-4o-mini',
-	groq: 'llama-3.3-70b-versatile',
-	together: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-	openrouter: 'openai/gpt-4o-mini',
-	mistral: 'mistral-small-latest',
-	fireworks: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
-};
 
 const MAX_STEPS = 6;
 
@@ -43,22 +34,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 	const admin = createAdminClient();
 
 	// Find an OpenAI-compatible LLM connection (active, has credentials).
-	const { data: defs } = await admin.from('app_definitions').select('id, slug').in('slug', Object.keys(PROVIDERS));
+	const { data: defs } = await admin.from('app_definitions').select('id, slug').in('slug', LLM_SLUGS);
 	const slugById = new Map((defs || []).map((d: any) => [d.id, d.slug]));
+	const orgId = (await admin.from('mcp_servers').select('org_id').eq('id', id).single()).data?.org_id;
 	const { data: conns } = await admin
 		.from('app_connections')
 		.select('id, app_def_id, base_url, credentials, auth_type, config')
-		.eq('org_id', (await admin.from('mcp_servers').select('org_id').eq('id', id).single()).data?.org_id)
+		.eq('org_id', orgId)
 		.eq('is_active', true);
-	const llm = (conns || []).find((c: any) => slugById.has(c.app_def_id) && c.credentials);
+	const candidates = (conns || []).filter((c: any) => slugById.has(c.app_def_id) && c.credentials);
+	// Prefer the explicitly chosen connection (from Settings), else the first.
+	const llm = (body.connectionId && candidates.find((c: any) => c.id === body.connectionId)) || candidates[0];
 	if (!llm) {
 		return NextResponse.json(
-			{ error: 'No connected LLM. Add an OpenAI / Groq / Together / OpenRouter / Mistral / Fireworks connection to use the playground.' },
+			{ error: 'No connected LLM. Connect one under Settings → AI to use the playground.' },
 			{ status: 400 }
 		);
 	}
 	const slug = slugById.get(llm.app_def_id)!;
-	const model = body.model || PROVIDERS[slug];
+	const model = body.model || DEFAULT_MODELS[slug];
 	let apiKey = '';
 	try {
 		apiKey = decryptCredentials(llm.credentials).value || '';

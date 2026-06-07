@@ -7,6 +7,8 @@
 export interface Preferences {
 	defaultTransport: 'http_stream' | 'sse';
 	activityRefreshMs: number; // 0 = off
+	llmConnectionId: string | null; // chosen Playground brain
+	llmModel: string; // optional model override
 }
 
 const KEY = 'mcpify.prefs';
@@ -14,6 +16,8 @@ const KEY = 'mcpify.prefs';
 export const DEFAULT_PREFS: Preferences = {
 	defaultTransport: 'http_stream',
 	activityRefreshMs: 5000,
+	llmConnectionId: null,
+	llmModel: '',
 };
 
 export function getPrefs(): Preferences {
