@@ -211,6 +211,10 @@ function safeJson(s: string): any {
 export async function pingConnection(
 	connection: any
 ): Promise<{ ok: boolean; warn?: boolean; status: number; message: string }> {
+	if (connection.connector_type === 'database') {
+		const { pingDatabase } = await import('@/lib/connectors/database');
+		return pingDatabase(connection);
+	}
 	const baseUrl: string = (connection.base_url || '').replace(/\/$/, '');
 	if (!baseUrl) return { ok: false, status: 0, message: 'No base URL configured' };
 

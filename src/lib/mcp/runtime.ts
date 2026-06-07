@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { executeTool } from '@/lib/proxy';
+import { executeDbTool } from '@/lib/connectors/database';
 import { redactObject, redactText } from '@/lib/mcp/redact';
 import { buildStepArgs, type CompositeCtx } from '@/lib/mcp/composite';
 import type { AuthedServer } from '@/lib/mcp/auth';
@@ -462,7 +463,10 @@ export async function handleRpc(
 						response = rpcError(id, INVALID_PARAMS, `No connection for tool: ${toolName}`);
 						break;
 					}
-					result = await executeTool(connection, tool, args);
+					result =
+						connection.connector_type === 'database'
+							? await executeDbTool(connection, tool, args)
+							: await executeTool(connection, tool, args);
 				}
 				statusCode = result.isError ? 502 : 200;
 				respText = result.content?.map((c: any) => c.text).join('\n').slice(0, 8000) || null;

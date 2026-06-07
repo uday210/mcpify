@@ -1,6 +1,7 @@
 import { encryptCredentials } from '@/lib/encryption';
 import { getCatalogConnector } from '@/lib/connectors/catalog';
 import { parseSpecString, GeneratedTool } from '@/lib/connectors/openapi-to-mcp';
+import { DATABASE_TOOLS } from '@/lib/connectors/database';
 
 export interface BuildResult {
 	insert: Record<string, any>;
@@ -104,6 +105,13 @@ export async function buildConnectionInsert(
 		if (!baseUrl) throw new Error('baseUrl is required for manual connectors');
 		tools = normalizeManualTools(body.tools);
 		if (!tools.length) throw new Error('Add at least one tool');
+	} else if (connectorType === 'database') {
+		const cs = body.credentials?.value || '';
+		if (!/^postgres(ql)?:\/\//i.test(cs)) {
+			throw new Error('Provide a Postgres connection string (postgresql://user:pass@host:5432/db).');
+		}
+		baseUrl = 'db://postgres';
+		tools = DATABASE_TOOLS;
 	} else {
 		throw new Error(`Unknown connector type: ${connectorType}`);
 	}
@@ -171,11 +179,16 @@ export async function buildConnectionInsert(
 		if (!config.token_path_template) config.token_path_template = '/bot{token}';
 	}
 
+	// Database connectors store the connection string (encrypted) as credentials.
+	if (connectorType === 'database' && credsInput.value) {
+		credentials = encryptCredentials({ value: credsInput.value });
+	}
+
 	const insert = {
 		org_id: orgId,
 		app_def_id: appDefId,
 		name: body.name,
-		auth_type: authType,
+		auth_type: connectorType === 'database' ? 'database' : authType,
 		connector_type: connectorType,
 		base_url: baseUrl,
 		credentials,

@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle, Database } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { parseCurl } from '@/lib/connectors/curl';
 
-type ConnectorType = 'catalog' | 'openapi' | 'manual';
+type ConnectorType = 'catalog' | 'openapi' | 'manual' | 'database';
 type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc' | 'oauth2_account' | 'token_path';
 
 interface CatalogApp {
@@ -87,6 +87,8 @@ export default function NewConnectionPage() {
 	const [tools, setTools] = useState<ManualTool[]>([{ name: '', http_method: 'GET', path_template: '/', query: '', body: '' }]);
 	const [staticHeaders, setStaticHeaders] = useState<Record<string, string>>({});
 	const [curlText, setCurlText] = useState('');
+	// database
+	const [dbUrl, setDbUrl] = useState('');
 
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -232,6 +234,9 @@ export default function NewConnectionPage() {
 			body.tools = buildManualTools();
 			if (Object.keys(staticHeaders).length) config.static_headers = staticHeaders;
 		}
+		if (connectorType === 'database') {
+			body.credentials = { value: dbUrl };
+		}
 		return body;
 	};
 
@@ -299,6 +304,7 @@ export default function NewConnectionPage() {
 		{ v: 'catalog', label: 'Catalog', icon: Boxes },
 		{ v: 'openapi', label: 'OpenAPI', icon: FileJson },
 		{ v: 'manual', label: 'Manual', icon: Wrench },
+		{ v: 'database', label: 'Database', icon: Database },
 	];
 
 	return (
@@ -327,7 +333,8 @@ export default function NewConnectionPage() {
 								onClick={() => {
 									setConnectorType(s.v);
 									setAppSlug('');
-									if (s.v !== 'catalog') setAuthType('api_key');
+									if (s.v === 'database') setAuthType('none');
+									else if (s.v !== 'catalog') setAuthType('api_key');
 								}}
 								className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-lg transition ${
 									active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
@@ -561,6 +568,27 @@ export default function NewConnectionPage() {
 								</>
 							)}
 
+							{/* database fields */}
+							{connectorType === 'database' && (
+								<div className="space-y-3">
+									<div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600">
+										Connect a Postgres database (Supabase, Neon, RDS, …). You’ll get read-only tools:
+										<span className="font-mono text-xs"> list_tables, describe_table, run_query</span>. All queries run read-only.
+									</div>
+									<div>
+										<label className={labelCls}>Postgres connection string</label>
+										<input
+											className={`${input} font-mono text-xs`}
+											type="password"
+											value={dbUrl}
+											onChange={(e) => setDbUrl(e.target.value)}
+											placeholder="postgresql://user:password@host:5432/dbname"
+										/>
+										<p className="text-xs text-slate-500 mt-1">Stored encrypted. Use a read-only DB role for safety.</p>
+									</div>
+								</div>
+							)}
+
 							{/* per-account base URL (Shopify store, Jira/Zendesk site…) */}
 							{connectorType === 'catalog' && selectedApp?.needs_base_url && (
 								<div>
@@ -581,8 +609,8 @@ export default function NewConnectionPage() {
 								<input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="My connection" />
 							</div>
 
-							{/* auth selector (non-catalog) */}
-							{connectorType !== 'catalog' && (
+							{/* auth selector (non-catalog, non-database) */}
+							{connectorType !== 'catalog' && connectorType !== 'database' && (
 								<div>
 									<label className={labelCls}>Authentication</label>
 									<select className={input} value={authType} onChange={(e) => setAuthType(e.target.value as AuthType)}>

@@ -45,7 +45,8 @@
       "Bash(npx vitest *)",
       "Bash(grep -n \"playground\\\\`}\\\\|Playground\\\\|href={\\\\`/dashboard/servers/\\\\${id}/playground\" \"src/app/dashboard/servers/[id]/page.tsx\")",
       "Bash(node scripts/seed-batch-15.mjs)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(node -e \"console.log\\('pg', require\\('pg/package.json'\\).version\\)\")"
     ],
     "additionalDirectories": [
       "/Users/udaykiranbussa/Desktop/MyPersonalGithub/mcpify/src/app/api/mcp/[serverId]"
