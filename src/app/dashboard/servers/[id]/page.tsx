@@ -15,6 +15,15 @@ import ToolTester from '@/components/ToolTester';
 import { toast } from '@/components/Toaster';
 import { Stat, CallsBarChart, CallsTable } from '@/components/monitor';
 
+type Tab = 'connect' | 'tools' | 'prompts' | 'activity' | 'settings';
+const TABS: { id: Tab; label: string }[] = [
+	{ id: 'connect', label: 'Connect' },
+	{ id: 'tools', label: 'Tools' },
+	{ id: 'prompts', label: 'Prompts' },
+	{ id: 'activity', label: 'Activity' },
+	{ id: 'settings', label: 'Settings' },
+];
+
 export default function ServerDetailPage() {
 	const params = useParams();
 	const router = useRouter();
@@ -22,6 +31,7 @@ export default function ServerDetailPage() {
 
 	const [server, setServer] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
+	const [tab, setTab] = useState<Tab>('connect');
 
 	const [auto, setAuto] = useState(true);
 	const [tools, setTools] = useState<any[]>([]);
@@ -83,12 +93,12 @@ export default function ServerDetailPage() {
 		}
 	};
 
-	// Live-refresh the monitoring data.
+	// Live-refresh the monitoring data while on the Activity tab.
 	useEffect(() => {
-		if (!auto) return;
+		if (!auto || tab !== 'activity') return;
 		const t = setInterval(load, 5000);
 		return () => clearInterval(t);
-	}, [auto, id]);
+	}, [auto, id, tab]);
 
 	const patch = async (payload: any) => {
 		const r = await fetch(`/api/servers/${id}`, {
@@ -112,7 +122,7 @@ export default function ServerDetailPage() {
 		if (!confirm('Delete this server permanently?')) return;
 		await fetch(`/api/servers/${id}`, { method: 'DELETE' });
 		toast('Server deleted', 'success');
-		router.push('/dashboard');
+		router.push('/dashboard/servers');
 	};
 
 	if (loading) {
@@ -127,16 +137,19 @@ export default function ServerDetailPage() {
 	}
 
 	const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
+	const authMode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
+	const enabledCount = tools.filter((t) => t.enabled).length;
 
 	return (
 		<div className="max-w-3xl">
 			<button
-				onClick={() => router.push('/dashboard')}
+				onClick={() => router.push('/dashboard/servers')}
 				className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4"
 			>
 				<ArrowLeft className="w-4 h-4" /> Back to servers
 			</button>
 
+			{/* Header */}
 			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5 mb-6 flex items-center gap-4">
 				{server.mode === 'aggregate' ? (
 					<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lift">
@@ -180,16 +193,31 @@ export default function ServerDetailPage() {
 						<Power className="w-4 h-4" />
 						<span className="hidden sm:inline">{server.is_active ? 'Disable' : 'Enable'}</span>
 					</button>
-					<button onClick={remove} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition">
-						<Trash2 className="w-4 h-4" />
-					</button>
 				</div>
 			</div>
 
-			{/* Connection details */}
-			{(() => {
-				const authMode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
-				return (
+			{/* Pending approvals — always visible, time-sensitive */}
+			<ServerApprovals serverId={id} />
+
+			{/* Tabs */}
+			<div className="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto">
+				{TABS.map((t) => (
+					<button
+						key={t.id}
+						onClick={() => setTab(t.id)}
+						className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition whitespace-nowrap ${
+							tab === t.id ? 'border-cyan-500 text-cyan-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+						}`}
+					>
+						{t.label}
+						{t.id === 'tools' && tools.length > 0 && <span className="ml-1.5 text-xs text-slate-400">{enabledCount}/{tools.length}</span>}
+					</button>
+				))}
+			</div>
+
+			{/* ---- Connect ---- */}
+			{tab === 'connect' && (
+				<>
 					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 space-y-4 mb-6">
 						<Field label="MCP URL" value={server.base_url} />
 
@@ -205,9 +233,7 @@ export default function ServerDetailPage() {
 										key={m.v}
 										onClick={() => patch({ authMode: m.v })}
 										className={`px-3 py-2 rounded-lg text-sm border transition ${
-											authMode === m.v
-												? 'border-cyan-500 bg-cyan-50 text-cyan-700'
-												: 'border-slate-200 text-slate-600 hover:bg-slate-50'
+											authMode === m.v ? 'border-cyan-500 bg-cyan-50 text-cyan-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
 										}`}
 									>
 										{m.label}
@@ -222,17 +248,12 @@ export default function ServerDetailPage() {
 									<label className={labelCls}>API Key</label>
 									<div className="flex items-center gap-2">
 										<CopyButton value={server.api_key} />
-										<button
-											onClick={() => patch({ regenerateKey: true })}
-											className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-										>
+										<button onClick={() => patch({ regenerateKey: true })} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700">
 											<RotateCw className="w-3.5 h-3.5" /> Regenerate
 										</button>
 									</div>
 								</div>
-								<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
-									{server.api_key}
-								</div>
+								<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">{server.api_key}</div>
 							</div>
 						)}
 
@@ -245,17 +266,12 @@ export default function ServerDetailPage() {
 										<label className={labelCls}>Client Secret</label>
 										<div className="flex items-center gap-2">
 											<CopyButton value={server.oauth_client_secret || ''} />
-											<button
-												onClick={() => patch({ regenerateSecret: true })}
-												className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-											>
+											<button onClick={() => patch({ regenerateSecret: true })} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700">
 												<RotateCw className="w-3.5 h-3.5" /> Regenerate
 											</button>
 										</div>
 									</div>
-									<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">
-										{server.oauth_client_secret}
-									</div>
+									<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono break-all">{server.oauth_client_secret}</div>
 								</div>
 							</>
 						)}
@@ -266,165 +282,161 @@ export default function ServerDetailPage() {
 							</div>
 						)}
 					</div>
-				);
-			})()}
 
-			{/* Rate limit */}
-			<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-				<h2 className="font-semibold text-slate-900 mb-1">Rate limit</h2>
-				<p className="text-sm text-slate-500 mb-4">Cap how many tool calls this server accepts per minute. Leave blank for unlimited.</p>
-				<div className="flex items-end gap-3">
-					<div>
-						<label className="block text-xs font-medium text-slate-500 mb-1">Calls / minute</label>
-						<input
-							type="number"
-							min={0}
-							value={rateLimit}
-							onChange={(e) => setRateLimit(e.target.value)}
-							placeholder="Unlimited"
-							className="w-40 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none"
-						/>
-					</div>
-					<button
-						onClick={saveLimit}
-						disabled={savingLimit}
-						className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50"
-					>
-						{savingLimit ? 'Saving…' : 'Save'}
-					</button>
-					<span className="text-xs text-slate-400 pb-2.5">
-						Over-limit calls return a 429 error to the client.
-					</span>
-				</div>
-			</div>
+					<ServerConnect
+						slug={server.slug}
+						url={server.base_url}
+						transport={server.transport_type}
+						authMode={authMode}
+						apiKey={server.api_key}
+						oauthClientId={server.oauth_client_id}
+						oauthClientSecret={server.oauth_client_secret}
+					/>
+				</>
+			)}
 
-			{/* Connect to a client */}
-			<ServerConnect
-				slug={server.slug}
-				url={server.base_url}
-				transport={server.transport_type}
-				authMode={server.auth_mode || (server.auth_required === false ? 'none' : 'api_key')}
-				apiKey={server.api_key}
-				oauthClientId={server.oauth_client_id}
-				oauthClientSecret={server.oauth_client_secret}
-			/>
-
-			{/* Test console */}
-			<div className="mb-6">
-				<ToolTester serverId={id} tools={tools} />
-			</div>
-
-			{/* Pending approvals (only shows when a client is waiting) */}
-			<ServerApprovals serverId={id} />
-
-			{/* Tools (curate) */}
-			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 mb-6">
-				<div className="flex items-center justify-between mb-4">
-					<h2 className="font-semibold text-slate-900">
-						Tools ({tools.filter((t) => t.enabled).length}/{tools.length})
-					</h2>
-					{toolsDirty && (
-						<button
-							onClick={saveTools}
-							disabled={savingTools}
-							className="px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
-						>
-							{savingTools ? 'Saving…' : 'Save changes'}
-						</button>
-					)}
-				</div>
-				<p className="text-xs text-slate-400 mb-3">
-					Toggle tools on/off, rename them, and edit their descriptions. A clear description helps the LLM pick the right
-					tool. Disabled tools aren’t exposed to clients. The shield marks a tool as requiring human approval before it runs.
-				</p>
-				<div className="divide-y">
-					{tools.map((t: any) => (
-						<div key={t.id} className="py-3">
-							<div className="flex items-center gap-3">
-								<button
-									onClick={() => patchTool(t.id, { enabled: !t.enabled })}
-									className={`relative w-9 h-5 rounded-full transition shrink-0 ${t.enabled ? 'bg-cyan-500' : 'bg-slate-300'}`}
-									title={t.enabled ? 'Enabled' : 'Disabled'}
-								>
-									<span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${t.enabled ? 'translate-x-4' : ''}`} />
+			{/* ---- Tools ---- */}
+			{tab === 'tools' && (
+				<>
+					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 mb-6">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="font-semibold text-slate-900">Tools ({enabledCount}/{tools.length})</h2>
+							{toolsDirty && (
+								<button onClick={saveTools} disabled={savingTools} className="px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50">
+									{savingTools ? 'Saving…' : 'Save changes'}
 								</button>
-								<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center shrink-0">
-									{t.http_method}
-								</span>
-								<input
-									value={t.name}
-									onChange={(e) => patchTool(t.id, { name: e.target.value })}
-									className={`text-sm font-mono bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 flex-1 min-w-0 ${
-										t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
-									}`}
-								/>
-								<span className="text-[11px] font-mono text-slate-400 truncate hidden md:block max-w-[24%]" title={t.path_template}>
-									{t.path_template}
-								</span>
-								<button
-									onClick={() => patchTool(t.id, { requires_approval: !t.requires_approval })}
-									title={t.requires_approval ? 'Requires human approval before running' : 'Runs without approval'}
-									className={`p-1.5 rounded-lg shrink-0 transition ${t.requires_approval ? 'text-amber-600 bg-amber-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
-								>
-									<ShieldAlert className="w-4 h-4" />
-								</button>
-							</div>
-							<input
-								value={t.description || ''}
-								onChange={(e) => patchTool(t.id, { description: e.target.value })}
-								placeholder="Describe what this tool does (shown to the LLM)…"
-								className="mt-1.5 ml-[3.25rem] w-[calc(100%-3.25rem)] text-xs text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 py-0.5"
-							/>
+							)}
 						</div>
-					))}
-					{tools.length === 0 && <p className="text-sm text-slate-400 py-2">No tools.</p>}
-				</div>
-			</div>
-
-			{/* Composite tools */}
-			<ServerComposite serverId={id} />
-
-			{/* Custom prompts */}
-			<ServerPrompts serverId={id} />
-
-			{/* Monitoring */}
-			<div className="flex items-center justify-between mb-3">
-				<h2 className="text-lg font-semibold text-slate-900">Monitoring</h2>
-				<button
-					onClick={() => setAuto((a) => !a)}
-					className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border transition ${
-						auto ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-					}`}
-				>
-					<RotateCw className={`w-3.5 h-3.5 ${auto ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
-					{auto ? 'Live' : 'Paused'}
-				</button>
-			</div>
-
-			{(() => {
-				const logs = server.logs || [];
-				const recentErr = logs.filter((l: any) => (l.status_code || 0) >= 400).length;
-				const avg = logs.length
-					? Math.round(logs.reduce((s: number, l: any) => s + (l.duration_ms || 0), 0) / logs.length)
-					: 0;
-				return (
-					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-						<Stat label="Total calls" value={server.access_count || 0} icon={ActivityIcon} />
-						<Stat label="Errors (all time)" value={server.error_count || 0} tone={server.error_count ? 'bad' : 'good'} icon={AlertTriangle} />
-						<Stat label="Avg latency" value={`${avg}ms`} icon={Gauge} />
-						<Stat label="Errors (recent)" value={recentErr} tone={recentErr ? 'bad' : 'good'} icon={AlertTriangle} />
+						<p className="text-xs text-slate-400 mb-3">
+							Toggle tools on/off, rename them, and edit their descriptions. A clear description helps the LLM pick the right
+							tool. Disabled tools aren’t exposed to clients. The shield marks a tool as requiring human approval before it runs.
+						</p>
+						<div className="divide-y">
+							{tools.map((t: any) => (
+								<div key={t.id} className="py-3">
+									<div className="flex items-center gap-3">
+										<button
+											onClick={() => patchTool(t.id, { enabled: !t.enabled })}
+											className={`relative w-9 h-5 rounded-full transition shrink-0 ${t.enabled ? 'bg-cyan-500' : 'bg-slate-300'}`}
+											title={t.enabled ? 'Enabled' : 'Disabled'}
+										>
+											<span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${t.enabled ? 'translate-x-4' : ''}`} />
+										</button>
+										<span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600 w-16 text-center shrink-0">{t.http_method}</span>
+										<input
+											value={t.name}
+											onChange={(e) => patchTool(t.id, { name: e.target.value })}
+											className={`text-sm font-mono bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 flex-1 min-w-0 ${
+												t.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
+											}`}
+										/>
+										<span className="text-[11px] font-mono text-slate-400 truncate hidden md:block max-w-[24%]" title={t.path_template}>{t.path_template}</span>
+										<button
+											onClick={() => patchTool(t.id, { requires_approval: !t.requires_approval })}
+											title={t.requires_approval ? 'Requires human approval before running' : 'Runs without approval'}
+											className={`p-1.5 rounded-lg shrink-0 transition ${t.requires_approval ? 'text-amber-600 bg-amber-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
+										>
+											<ShieldAlert className="w-4 h-4" />
+										</button>
+									</div>
+									<input
+										value={t.description || ''}
+										onChange={(e) => patchTool(t.id, { description: e.target.value })}
+										placeholder="Describe what this tool does (shown to the LLM)…"
+										className="mt-1.5 ml-[3.25rem] w-[calc(100%-3.25rem)] text-xs text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-cyan-400 focus:outline-none px-1 py-0.5"
+									/>
+								</div>
+							))}
+							{tools.length === 0 && <p className="text-sm text-slate-400 py-2">No tools.</p>}
+						</div>
 					</div>
-				);
-			})()}
 
-			<div className="mb-6">
-				<CallsBarChart logs={server.logs || []} />
-			</div>
+					<ServerComposite serverId={id} />
 
-			<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5">
-				<h3 className="font-semibold text-slate-900 mb-3">Recent calls</h3>
-				<CallsTable rows={server.logs || []} />
-			</div>
+					<ToolTester serverId={id} tools={tools} />
+				</>
+			)}
+
+			{/* ---- Prompts ---- */}
+			{tab === 'prompts' && <ServerPrompts serverId={id} />}
+
+			{/* ---- Activity ---- */}
+			{tab === 'activity' && (
+				<>
+					<div className="flex items-center justify-between mb-3">
+						<h2 className="text-lg font-semibold text-slate-900">Monitoring</h2>
+						<button
+							onClick={() => setAuto((a) => !a)}
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border transition ${
+								auto ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+							}`}
+						>
+							<RotateCw className={`w-3.5 h-3.5 ${auto ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+							{auto ? 'Live' : 'Paused'}
+						</button>
+					</div>
+
+					{(() => {
+						const logs = server.logs || [];
+						const recentErr = logs.filter((l: any) => (l.status_code || 0) >= 400).length;
+						const avg = logs.length ? Math.round(logs.reduce((s: number, l: any) => s + (l.duration_ms || 0), 0) / logs.length) : 0;
+						return (
+							<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+								<Stat label="Total calls" value={server.access_count || 0} icon={ActivityIcon} />
+								<Stat label="Errors (all time)" value={server.error_count || 0} tone={server.error_count ? 'bad' : 'good'} icon={AlertTriangle} />
+								<Stat label="Avg latency" value={`${avg}ms`} icon={Gauge} />
+								<Stat label="Errors (recent)" value={recentErr} tone={recentErr ? 'bad' : 'good'} icon={AlertTriangle} />
+							</div>
+						);
+					})()}
+
+					<div className="mb-6">
+						<CallsBarChart logs={server.logs || []} />
+					</div>
+
+					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-5">
+						<h3 className="font-semibold text-slate-900 mb-3">Recent calls</h3>
+						<CallsTable rows={server.logs || []} />
+					</div>
+				</>
+			)}
+
+			{/* ---- Settings ---- */}
+			{tab === 'settings' && (
+				<>
+					<div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+						<h2 className="font-semibold text-slate-900 mb-1">Rate limit</h2>
+						<p className="text-sm text-slate-500 mb-4">Cap how many tool calls this server accepts per minute. Leave blank for unlimited.</p>
+						<div className="flex items-end gap-3">
+							<div>
+								<label className="block text-xs font-medium text-slate-500 mb-1">Calls / minute</label>
+								<input
+									type="number"
+									min={0}
+									value={rateLimit}
+									onChange={(e) => setRateLimit(e.target.value)}
+									placeholder="Unlimited"
+									className="w-40 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 outline-none"
+								/>
+							</div>
+							<button onClick={saveLimit} disabled={savingLimit} className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50">
+								{savingLimit ? 'Saving…' : 'Save'}
+							</button>
+							<span className="text-xs text-slate-400 pb-2.5">Over-limit calls return a 429 error to the client.</span>
+						</div>
+					</div>
+
+					<div className="bg-white rounded-2xl border border-red-200 shadow-card p-6">
+						<h2 className="font-semibold text-red-700">Danger zone</h2>
+						<div className="flex items-center justify-between mt-3">
+							<p className="text-sm text-slate-500">Permanently delete this server and its tools, prompts and logs.</p>
+							<button onClick={remove} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition">
+								<Trash2 className="w-4 h-4" /> Delete server
+							</button>
+						</div>
+					</div>
+				</>
+			)}
 		</div>
 	);
 }
@@ -436,9 +448,7 @@ function Field({ label, value }: { label: string; value: string }) {
 				<label className="block text-sm font-medium text-slate-700">{label}</label>
 				<CopyButton value={value} />
 			</div>
-			<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm break-all">
-				{value}
-			</div>
+			<div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm break-all">{value}</div>
 		</div>
 	);
 }
