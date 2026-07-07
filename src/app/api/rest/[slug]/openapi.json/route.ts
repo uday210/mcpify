@@ -14,9 +14,11 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = await params;
 	const admin = createAdminClient();
+	// select('*') (not a named column list) so this keeps working before
+	// migration 025 adds `interfaces` — naming a missing column errors the query.
 	const { data: server } = await admin
 		.from('mcp_servers')
-		.select('id, name, slug, description, interfaces')
+		.select('*')
 		.eq('slug', slug)
 		.maybeSingle();
 	if (!server) return NextResponse.json({ error: 'Not found' }, { status: 404 });
