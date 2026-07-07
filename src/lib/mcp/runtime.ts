@@ -139,6 +139,42 @@ interface ToolRow {
 	composite_steps?: Array<{ tool: string; args: Record<string, any> }> | null;
 }
 
+/**
+ * Guarantees a non-empty tool description. Some clients (notably Salesforce
+ * Agentforce) refuse to allowlist a tool whose description is empty, so we
+ * synthesize a reasonable one from the HTTP method and path when the stored
+ * description is blank.
+ */
+function toolDescription(t: ToolRow): string {
+	const d = (t.description || '').trim();
+	if (d) return d;
+	const method = (t.http_method || 'GET').toUpperCase();
+	const path = t.path_template || '';
+	return path
+		? `${method} ${path} — call the ${t.name} operation.`
+		: `Call the ${t.name} operation.`;
+}
+
+/**
+ * Ensures every property in the input schema carries a non-empty description.
+ * Agentforce and some other clients validate parameter descriptions during
+ * allowlisting; a blank one can reject the whole tool.
+ */
+function describedInputSchema(t: ToolRow): Record<string, any> {
+	const schema = t.input_schema || { type: 'object', properties: {} };
+	const props = schema.properties;
+	if (!props || typeof props !== 'object') return schema;
+	const properties: Record<string, any> = {};
+	for (const [key, raw] of Object.entries(props)) {
+		const prop = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
+		properties[key] = {
+			...prop,
+			description: (prop.description || '').trim() || `The ${key} value.`,
+		};
+	}
+	return { ...schema, properties };
+}
+
 async function loadTools(serverId: string): Promise<ToolRow[]> {
 	const admin = createAdminClient();
 	// select('*') keeps this resilient to optional columns (requires_approval)
@@ -314,8 +350,8 @@ export async function handleRpc(
 				response = rpcResult(id, {
 					tools: page.map((t) => ({
 						name: t.name,
-						description: t.description || '',
-						inputSchema: t.input_schema || { type: 'object', properties: {} },
+						description: toolDescription(t),
+						inputSchema: describedInputSchema(t),
 					})),
 					...(nextCursor ? { nextCursor } : {}),
 				});
@@ -335,7 +371,7 @@ export async function handleRpc(
 					resources: page.map((t) => ({
 						uri: `tool://${t.name}`,
 						name: t.name,
-						description: t.description || '',
+						description: toolDescription(t),
 						mimeType: 'application/json',
 					})),
 					...(nextCursor ? { nextCursor } : {}),
