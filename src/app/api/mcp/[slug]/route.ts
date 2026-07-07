@@ -5,6 +5,7 @@ import { handleRpc } from '@/lib/mcp/runtime';
 import { registerSession, removeSession } from '@/lib/mcp/sessions';
 import { JsonRpcRequest } from '@/lib/mcp/jsonrpc';
 import { appBaseUrl } from '@/lib/mcp-oauth';
+import { serverHasInterface } from '@/lib/mcp/interfaces';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,9 @@ export async function POST(
 				},
 			}
 		);
+	}
+	if (!serverHasInterface(authed.server, 'mcp')) {
+		return json({ jsonrpc: '2.0', id: null, error: { code: -32601, message: 'MCP interface disabled for this server' } }, 404);
 	}
 
 	let payload: any;
@@ -83,6 +87,9 @@ export async function GET(
 	const authed = await authenticateServer(slug, key);
 	if (!authed) {
 		return new Response('Unauthorized', { status: 401, headers: CORS });
+	}
+	if (!serverHasInterface(authed.server, 'mcp')) {
+		return new Response('MCP interface disabled for this server', { status: 404, headers: CORS });
 	}
 
 	const sessionId = uuidv4();

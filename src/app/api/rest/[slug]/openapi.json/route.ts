@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { appBaseUrl } from '@/lib/mcp-oauth';
+import { serverHasInterface } from '@/lib/mcp/interfaces';
 
 export const runtime = 'nodejs';
 
@@ -15,10 +16,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 	const admin = createAdminClient();
 	const { data: server } = await admin
 		.from('mcp_servers')
-		.select('id, name, slug, description')
+		.select('id, name, slug, description, interfaces')
 		.eq('slug', slug)
 		.maybeSingle();
 	if (!server) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+	if (!serverHasInterface(server, 'rest')) {
+		return NextResponse.json({ error: 'REST interface disabled for this server' }, { status: 404 });
+	}
 
 	const { data: tools } = await admin
 		.from('mcp_tools')

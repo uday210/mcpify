@@ -186,6 +186,7 @@ export type Database = {
 					oauth_client_id: string | null;
 					oauth_client_secret: string | null;
 					mode: string;
+					interfaces: string[];
 					enabled_tools: string[];
 					enabled_resources: string[];
 					timeout_ms: number;
@@ -212,12 +213,14 @@ export type Database = {
 					oauth_client_id?: string | null;
 					oauth_client_secret?: string | null;
 					mode?: string;
+					interfaces?: string[];
 					enabled_tools?: string[];
 					enabled_resources?: string[];
 				};
 				Update: {
 					name?: string;
 					description?: string | null;
+					interfaces?: string[];
 					enabled_tools?: string[];
 					enabled_resources?: string[];
 					is_active?: boolean;
