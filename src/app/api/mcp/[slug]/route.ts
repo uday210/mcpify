@@ -4,6 +4,7 @@ import { authenticateServer, extractKey } from '@/lib/mcp/auth';
 import { handleRpc } from '@/lib/mcp/runtime';
 import { registerSession, removeSession } from '@/lib/mcp/sessions';
 import { JsonRpcRequest } from '@/lib/mcp/jsonrpc';
+import { appBaseUrl } from '@/lib/mcp-oauth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -86,7 +87,7 @@ export async function GET(
 
 	const sessionId = uuidv4();
 	const encoder = new TextEncoder();
-	const origin = new URL(request.url).origin;
+	const origin = appBaseUrl(request.url);
 	const endpoint = `${origin}/api/mcp/${slug}/messages?sessionId=${sessionId}&key=${encodeURIComponent(key!)}`;
 
 	let keepAlive: ReturnType<typeof setInterval>;
