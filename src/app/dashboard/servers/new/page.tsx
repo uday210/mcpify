@@ -29,6 +29,8 @@ export default function NewServerPage() {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [name, setName] = useState('');
 	const [transport, setTransport] = useState('http_stream');
+	// Which surfaces to expose. Default to both — MCP for AI clients, REST for HTTP.
+	const [interfaces, setInterfaces] = useState<Set<'mcp' | 'rest'>>(new Set(['mcp', 'rest']));
 
 	// Apply the user's saved default transport on mount.
 	useEffect(() => {
@@ -72,9 +74,17 @@ export default function NewServerPage() {
 			return next;
 		});
 
+	const toggleInterface = (v: 'mcp' | 'rest') =>
+		setInterfaces((s) => {
+			const next = new Set(s);
+			next.has(v) ? next.delete(v) : next.add(v);
+			return next;
+		});
+
 	const submit = async () => {
 		setError(null);
 		if (!name) return setError('Name your server.');
+		if (interfaces.size === 0) return setError('Pick at least one interface (MCP or REST).');
 		if (mode === 'single') {
 			if (!connectionId) return setError('Pick a connection.');
 			if (selected.size === 0) return setError('Select at least one tool.');
@@ -90,6 +100,7 @@ export default function NewServerPage() {
 					name,
 					transportType: transport,
 					authMode,
+					interfaces: Array.from(interfaces),
 					toolNames: mode === 'single' ? Array.from(selected) : undefined,
 				}),
 			});
@@ -112,6 +123,10 @@ export default function NewServerPage() {
 	if (created) {
 		const mcpUrl = created.base_url;
 		const tokenUrl = `${mcpUrl}/token`;
+		const restBase = String(mcpUrl).replace('/api/mcp/', '/api/rest/');
+		const createdInterfaces: string[] = Array.isArray(created.interfaces) ? created.interfaces : ['mcp', 'rest'];
+		const hasMcp = createdInterfaces.includes('mcp');
+		const hasRest = createdInterfaces.includes('rest');
 		return (
 			<div className="max-w-2xl">
 				<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6">
@@ -124,7 +139,13 @@ export default function NewServerPage() {
 					</p>
 
 					<div className="space-y-4">
-						<Field label="MCP URL" value={mcpUrl} />
+						{hasMcp && <Field label="MCP URL" value={mcpUrl} />}
+						{hasRest && (
+							<>
+								<Field label="REST base URL" value={restBase} />
+								<Field label="OpenAPI schema" value={`${restBase}/openapi.json`} />
+							</>
+						)}
 						{authMode === 'api_key' && <Field label="API Key" value={created.apiKey} mono />}
 						{authMode === 'oauth' && (
 							<>
@@ -176,8 +197,8 @@ export default function NewServerPage() {
 					<Server className="w-5 h-5 text-white" />
 				</div>
 				<div>
-					<h1 className="text-2xl font-bold tracking-tight text-slate-900">Create MCP Server</h1>
-					<p className="text-slate-500 text-sm">Expose a connection&apos;s tools over MCP.</p>
+					<h1 className="text-2xl font-bold tracking-tight text-slate-900">Create Server</h1>
+					<p className="text-slate-500 text-sm">Expose a connection&apos;s tools over MCP, a REST API, or both.</p>
 				</div>
 			</div>
 
@@ -255,25 +276,57 @@ export default function NewServerPage() {
 					</div>
 
 					<div>
-						<label className={labelCls}>Transport</label>
+						<label className={labelCls}>Expose as</label>
 						<div className="grid grid-cols-2 gap-3">
 							{[
-								{ v: 'http_stream', label: 'Streamable HTTP', desc: 'Modern, single endpoint' },
-								{ v: 'sse', label: 'SSE', desc: 'Legacy server-sent events' },
-							].map((t) => (
-								<button
-									key={t.v}
-									onClick={() => setTransport(t.v)}
-									className={`text-left p-3 rounded-lg border-2 transition ${
-										transport === t.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
-									}`}
-								>
-									<div className="font-medium text-slate-900">{t.label}</div>
-									<div className="text-xs text-slate-500">{t.desc}</div>
-								</button>
-							))}
+								{ v: 'mcp' as const, label: 'MCP Server', desc: 'For AI clients (Claude, Cursor, Salesforce)' },
+								{ v: 'rest' as const, label: 'REST API', desc: 'Plain HTTP + OpenAPI (ChatGPT, Zapier, curl)' },
+							].map((o) => {
+								const on = interfaces.has(o.v);
+								return (
+									<button
+										key={o.v}
+										onClick={() => toggleInterface(o.v)}
+										className={`text-left p-3 rounded-lg border-2 transition ${
+											on ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
+										}`}
+									>
+										<div className="flex items-center gap-2">
+											<span className={`w-4 h-4 rounded border flex items-center justify-center ${on ? 'bg-cyan-500 border-cyan-500' : 'border-slate-300'}`}>
+												{on && <Check className="w-3 h-3 text-white" />}
+											</span>
+											<span className="font-medium text-slate-900">{o.label}</span>
+										</div>
+										<div className="text-xs text-slate-500 mt-1">{o.desc}</div>
+									</button>
+								);
+							})}
 						</div>
+						<p className="text-xs text-slate-500 mt-2">Pick one or both. You can call the same tools over either surface.</p>
 					</div>
+
+					{interfaces.has('mcp') && (
+						<div>
+							<label className={labelCls}>Transport</label>
+							<div className="grid grid-cols-2 gap-3">
+								{[
+									{ v: 'http_stream', label: 'Streamable HTTP', desc: 'Modern, single endpoint' },
+									{ v: 'sse', label: 'SSE', desc: 'Legacy server-sent events' },
+								].map((t) => (
+									<button
+										key={t.v}
+										onClick={() => setTransport(t.v)}
+										className={`text-left p-3 rounded-lg border-2 transition ${
+											transport === t.v ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-slate-300'
+										}`}
+									>
+										<div className="font-medium text-slate-900">{t.label}</div>
+										<div className="text-xs text-slate-500">{t.desc}</div>
+									</button>
+								))}
+							</div>
+						</div>
+					)}
 
 					<div>
 						<label className={labelCls}>Access</label>

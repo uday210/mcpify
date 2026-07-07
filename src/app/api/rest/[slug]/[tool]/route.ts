@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateServer } from '@/lib/mcp/auth';
 import { handleRpc } from '@/lib/mcp/runtime';
+import { serverHasInterface } from '@/lib/mcp/interfaces';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 	const authed = await authenticateServer(slug, bearer(request));
 	if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	if (!serverHasInterface(authed.server, 'rest')) {
+		return NextResponse.json({ error: 'REST interface disabled for this server' }, { status: 404 });
+	}
 
 	let args: any = {};
 	try {

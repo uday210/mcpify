@@ -5,6 +5,7 @@ import { generateApiKey } from '@/lib/encryption';
 import { getOrgId, slugify } from '@/lib/api-helpers';
 import { faviconFor } from '@/lib/favicon';
 import { appBaseUrl } from '@/lib/mcp-oauth';
+import { normalizeInterfaces } from '@/lib/mcp/interfaces';
 
 /** GET /api/servers — list the current user's MCP servers. */
 export async function GET() {
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
 			? 'none'
 			: 'api_key';
 	const authRequired = authMode !== 'none';
+	// Which surfaces to expose: MCP, plain REST API, or both (defaults to MCP).
+	const interfaces = normalizeInterfaces(body.interfaces);
 	if (!name || !transportType) {
 		return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 	}
@@ -125,26 +128,33 @@ export async function POST(request: NextRequest) {
 	const oauthClientId = authMode === 'oauth' ? `mcpify_${generateApiKey().slice(0, 24)}` : null;
 	const oauthClientSecret = authMode === 'oauth' ? generateApiKey() : null;
 
-	const { data: server, error: serverError } = await supabase
-		.from('mcp_servers')
-		.insert({
-			org_id: orgId,
-			app_connection_id: boundConnectionId,
-			name,
-			slug,
-			description: description || null,
-			transport_type: transportType,
-			base_url: `${appUrl}/api/mcp/${slug}`,
-			api_key: apiKey,
-			auth_required: authRequired,
-			auth_mode: authMode,
-			oauth_client_id: oauthClientId,
-			oauth_client_secret: oauthClientSecret,
-			mode,
-			enabled_tools: toolRows.map((t) => t.name),
-		})
-		.select()
-		.single();
+	const insertRow: Record<string, any> = {
+		org_id: orgId,
+		app_connection_id: boundConnectionId,
+		name,
+		slug,
+		description: description || null,
+		transport_type: transportType,
+		base_url: `${appUrl}/api/mcp/${slug}`,
+		api_key: apiKey,
+		auth_required: authRequired,
+		auth_mode: authMode,
+		oauth_client_id: oauthClientId,
+		oauth_client_secret: oauthClientSecret,
+		mode,
+		interfaces,
+		enabled_tools: toolRows.map((t) => t.name),
+	};
+
+	let { data: server, error: serverError } = await supabase.from('mcp_servers').insert(insertRow).select().single();
+
+	// Deploy-order safety: if migration 025 (the `interfaces` column) hasn't been
+	// applied yet, retry without it so server creation never breaks. The facades
+	// treat a missing column as "all interfaces on", so behaviour is unchanged.
+	if (serverError && /interfaces/i.test(serverError.message)) {
+		delete insertRow.interfaces;
+		({ data: server, error: serverError } = await supabase.from('mcp_servers').insert(insertRow).select().single());
+	}
 
 	if (serverError) {
 		return NextResponse.json({ error: serverError.message }, { status: 400 });

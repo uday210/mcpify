@@ -8,6 +8,7 @@ import CopyButton from '@/components/CopyButton';
 import AppIcon from '@/components/AppIcon';
 import { faviconFor } from '@/lib/favicon';
 import ServerConnect from '@/components/ServerConnect';
+import ServerRest from '@/components/ServerRest';
 import ServerPrompts from '@/components/ServerPrompts';
 import ServerComposite from '@/components/ServerComposite';
 import ServerApprovals from '@/components/ServerApprovals';
@@ -192,6 +193,10 @@ export default function ServerDetailPage() {
 	const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
 	const authMode: string = server.auth_mode || (server.auth_required === false ? 'none' : 'api_key');
 	const enabledCount = tools.filter((t) => t.enabled).length;
+	const interfaces: string[] =
+		Array.isArray(server.interfaces) && server.interfaces.length ? server.interfaces : ['mcp', 'rest'];
+	const hasMcp = interfaces.includes('mcp');
+	const hasRest = interfaces.includes('rest');
 
 	return (
 		<div className="lg:flex lg:items-start lg:gap-0">
@@ -225,7 +230,9 @@ export default function ServerDetailPage() {
 						</span>
 					</div>
 					<div className="flex items-center gap-2 mt-1.5 text-xs">
-						<span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">{server.transport_type}</span>
+						{hasMcp && <span className="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 font-medium">MCP</span>}
+						{hasRest && <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">REST</span>}
+						{hasMcp && <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wide">{server.transport_type}</span>}
 						{server.mode === 'aggregate' && <span className="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700">aggregate</span>}
 						<span className="text-slate-500">{server.access_count || 0} calls</span>
 						<span className="text-slate-400">·</span>
@@ -275,7 +282,8 @@ export default function ServerDetailPage() {
 			{tab === 'connect' && (
 				<>
 					<div className="bg-white rounded-2xl border border-slate-200/70 shadow-card p-6 space-y-4 mb-6">
-						<Field label="MCP URL" value={server.base_url} />
+						{hasMcp && <Field label="MCP URL" value={server.base_url} />}
+						{hasRest && <Field label="REST base URL" value={server.base_url.replace('/api/mcp/', '/api/rest/')} />}
 
 						<div>
 							<label className={labelCls}>Access</label>
@@ -339,15 +347,21 @@ export default function ServerDetailPage() {
 						)}
 					</div>
 
-					<ServerConnect
-						slug={server.slug}
-						url={server.base_url}
-						transport={server.transport_type}
-						authMode={authMode}
-						apiKey={server.api_key}
-						oauthClientId={server.oauth_client_id}
-						oauthClientSecret={server.oauth_client_secret}
-					/>
+					{hasMcp && (
+						<ServerConnect
+							slug={server.slug}
+							url={server.base_url}
+							transport={server.transport_type}
+							authMode={authMode}
+							apiKey={server.api_key}
+							oauthClientId={server.oauth_client_id}
+							oauthClientSecret={server.oauth_client_secret}
+						/>
+					)}
+
+					{hasRest && (
+						<ServerRest url={server.base_url} authMode={authMode} apiKey={server.api_key} tools={tools} />
+					)}
 				</>
 			)}
 

@@ -34,6 +34,18 @@ interface MCPServer {
 	mode: string;
 	logo_url: string | null;
 	base_url: string;
+	interfaces?: string[];
+}
+
+/** MCP / REST pills for a server. Falls back to both when unset (legacy rows). */
+function InterfaceBadges({ s }: { s: MCPServer }) {
+	const list = Array.isArray(s.interfaces) && s.interfaces.length ? s.interfaces : ['mcp', 'rest'];
+	return (
+		<>
+			{list.includes('mcp') && <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-medium">MCP</span>}
+			{list.includes('rest') && <span className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 font-medium">REST</span>}
+		</>
+	);
 }
 
 type StatusFilter = 'all' | 'active' | 'paused';
@@ -250,8 +262,8 @@ function ServerCard({ s, copied, onCopy, onToggle }: { s: MCPServer; copied: boo
 				</Link>
 				<StatusPill active={s.is_active} />
 			</div>
-			<div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
-				<span className="uppercase tracking-wide">{s.transport_type}</span>
+			<div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+				<InterfaceBadges s={s} />
 				{s.mode === 'aggregate' && <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700">aggregate</span>}
 				<span className="flex items-center gap-1"><ActivityIcon className="w-3.5 h-3.5" />{s.access_count || 0}</span>
 				{s.error_count > 0 && <span className="flex items-center gap-1 text-red-500"><AlertTriangle className="w-3.5 h-3.5" />{s.error_count}</span>}
@@ -274,9 +286,9 @@ function ServerRow({ s, copied, onCopy, onToggle }: { s: MCPServer; copied: bool
 						<h3 className="font-semibold text-slate-900 group-hover:text-cyan-600 transition truncate">{s.name}</h3>
 						<StatusPill active={s.is_active} />
 					</div>
-					<div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+					<div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
 						<span className="font-mono">/{s.slug}</span>
-						<span className="uppercase">{s.transport_type}</span>
+						<InterfaceBadges s={s} />
 						<span className="flex items-center gap-1"><ActivityIcon className="w-3 h-3" />{s.access_count || 0}</span>
 						{s.error_count > 0 && <span className="text-red-500">{s.error_count} err</span>}
 					</div>
