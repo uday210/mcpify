@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractPage, isSafeHttpUrl } from '@/lib/connectors/web';
+import { extractPage, isSafeHttpUrl, connectionPages, WEB_TOOLS } from '@/lib/connectors/web';
 
 const HTML = `<!doctype html>
 <html>
@@ -38,6 +38,20 @@ describe('extractPage', () => {
 		expect(hrefs).toContain('https://shop.example.com/about');
 		expect(hrefs).toContain('https://other.example.com/x');
 		expect(hrefs.some((h) => h.startsWith('mailto:'))).toBe(false);
+	});
+});
+
+describe('connectionPages', () => {
+	it('uses config.pages when present', () => {
+		const conn = { base_url: 'https://a.com', config: { pages: ['https://a.com', 'https://b.com'] } };
+		expect(connectionPages(conn)).toEqual(['https://a.com', 'https://b.com']);
+	});
+	it('falls back to base_url for legacy single-page connections', () => {
+		expect(connectionPages({ base_url: 'https://a.com', config: {} })).toEqual(['https://a.com']);
+	});
+	it('exposes both get_all_pages and get_page tools', () => {
+		expect(WEB_TOOLS.map((t) => t.name)).toEqual(['get_all_pages', 'get_page']);
+		expect(WEB_TOOLS.every((t) => t.http_method === 'GET')).toBe(true);
 	});
 });
 
