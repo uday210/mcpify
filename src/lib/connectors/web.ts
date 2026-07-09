@@ -26,6 +26,25 @@ const MAX_PAGES = 25;
 const BROWSER_UA =
 	'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
+// The full header set a real Chrome sends. Bot filters (Akamai, Cloudflare)
+// commonly reject requests missing these — notably Accept-Encoding and the
+// Sec-Fetch-* / sec-ch-ua hints. Node's fetch still auto-decompresses the
+// gzip/br response even though we set Accept-Encoding ourselves.
+const BROWSER_HEADERS: Record<string, string> = {
+	'User-Agent': BROWSER_UA,
+	Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+	'Accept-Language': 'en-US,en;q=0.9',
+	'Accept-Encoding': 'gzip, deflate, br',
+	'sec-ch-ua': '"Chromium";v="125", "Not.A/Brand";v="24"',
+	'sec-ch-ua-mobile': '?0',
+	'sec-ch-ua-platform': '"macOS"',
+	'Sec-Fetch-Dest': 'document',
+	'Sec-Fetch-Mode': 'navigate',
+	'Sec-Fetch-Site': 'none',
+	'Sec-Fetch-User': '?1',
+	'Upgrade-Insecure-Requests': '1',
+};
+
 const FORMAT_PROP = {
 	type: 'string',
 	enum: ['json', 'text', 'markdown', 'html'],
@@ -251,13 +270,9 @@ export async function executeWebTool(
 	const format = ['json', 'text', 'markdown', 'html'].includes(String(args?.format)) ? String(args.format) : 'json';
 	const wantRaw = format === 'html';
 
-	// Custom headers configured on the connection (e.g. a cookie, auth header),
-	// plus browser-like defaults so basic bot filters still respond.
-	const headers: Record<string, string> = {
-		'User-Agent': BROWSER_UA,
-		Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-		'Accept-Language': 'en-US,en;q=0.9',
-	};
+	// Full browser header set so bot filters respond, then any custom headers
+	// configured on the connection (e.g. a cookie) override them.
+	const headers: Record<string, string> = { ...BROWSER_HEADERS };
 	const staticHeaders = (connection.config || {}).static_headers;
 	if (staticHeaders && typeof staticHeaders === 'object') {
 		for (const [k, v] of Object.entries(staticHeaders)) headers[k] = String(v);
