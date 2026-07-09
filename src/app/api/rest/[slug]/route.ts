@@ -31,9 +31,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 		name: server.name,
 		description: server.description || undefined,
 		openapi: `${base}/openapi.json`,
-		usage: 'Each tool is POST /api/rest/{slug}/{tool} with a JSON body of its arguments. Send your bearer/API key in the Authorization header.',
+		usage: 'Call /api/rest/{slug}/{tool} with the tool’s HTTP method — GET takes arguments as query params, other methods as a JSON body. Send your bearer/API key in the Authorization header.',
 		endpoints: (tools || []).map((t: any) => ({
-			method: 'POST',
+			method: (t.http_method || 'POST').toUpperCase(),
 			url: `${base}/${t.name}`,
 			tool: t.name,
 			description: t.description || undefined,
