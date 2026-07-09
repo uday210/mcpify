@@ -83,6 +83,8 @@ export default function NewConnectionPage() {
 	const [openapiUrl, setOpenapiUrl] = useState('');
 	const [openapiSpec, setOpenapiSpec] = useState('');
 	const [baseUrl, setBaseUrl] = useState('');
+	// web page bridge — one or more page URLs
+	const [webUrls, setWebUrls] = useState<string[]>(['']);
 	// manual
 	const [tools, setTools] = useState<ManualTool[]>([{ name: '', http_method: 'GET', path_template: '/', query: '', body: '' }]);
 	const [staticHeaders, setStaticHeaders] = useState<Record<string, string>>({});
@@ -238,7 +240,9 @@ export default function NewConnectionPage() {
 			body.credentials = { value: dbUrl };
 		}
 		if (connectorType === 'web') {
-			body.baseUrl = baseUrl;
+			const pages = webUrls.map((u) => u.trim()).filter(Boolean);
+			body.pages = pages;
+			body.baseUrl = pages[0] || '';
 			if (Object.keys(staticHeaders).length) config.static_headers = staticHeaders;
 		}
 		return body;
@@ -608,21 +612,45 @@ export default function NewConnectionPage() {
 							{connectorType === 'web' && (
 								<div className="space-y-3">
 									<div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600">
-										Bridge a web page: mcpify fetches it server-side and exposes its content at a stable URL you can
-										hand to tools that only take a URL (e.g. the Salesforce web crawler). You get a{' '}
-										<span className="font-mono text-xs">get_page</span> tool returning the title, text and links.
+										Bridge one or more web pages: mcpify fetches them server-side and exposes their content at a
+										stable URL you can hand to tools that only take a URL (e.g. the Salesforce web crawler). You get{' '}
+										<span className="font-mono text-xs">get_all_pages</span> (all pages in one call) and{' '}
+										<span className="font-mono text-xs">get_page</span> tools returning title, text and links.
 									</div>
 									<div>
-										<label className={labelCls}>Web page URL</label>
-										<input
-											className={input}
-											value={baseUrl}
-											onChange={(e) => setBaseUrl(e.target.value)}
-											placeholder="https://example.com/the-page-you-want"
-										/>
-										<p className="text-xs text-slate-400 mt-1">
-											The default page this connection serves. Callers can override it per request with a{' '}
-											<span className="font-mono">url</span> argument.
+										<label className={labelCls}>Web page URLs</label>
+										<div className="space-y-2">
+											{webUrls.map((u, i) => (
+												<div key={i} className="flex items-center gap-2">
+													<input
+														className={input}
+														value={u}
+														onChange={(e) => setWebUrls((arr) => arr.map((x, j) => (j === i ? e.target.value : x)))}
+														placeholder="https://example.com/a-page"
+													/>
+													{webUrls.length > 1 && (
+														<button
+															type="button"
+															onClick={() => setWebUrls((arr) => arr.filter((_, j) => j !== i))}
+															className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg shrink-0"
+															title="Remove"
+														>
+															<Trash2 className="w-4 h-4" />
+														</button>
+													)}
+												</div>
+											))}
+										</div>
+										<button
+											type="button"
+											onClick={() => setWebUrls((arr) => [...arr, ''])}
+											className="mt-2 inline-flex items-center gap-1.5 text-sm text-cyan-600 hover:text-cyan-700"
+										>
+											<Plus className="w-4 h-4" /> Add another page
+										</button>
+										<p className="text-xs text-slate-400 mt-2">
+											<span className="font-mono">get_all_pages</span> returns all of them in one response; callers can
+											still target one with <span className="font-mono">index</span> or an explicit <span className="font-mono">url</span>.
 										</p>
 									</div>
 								</div>

@@ -1,9 +1,11 @@
 import { GeneratedTool } from '@/lib/connectors/openapi-to-mcp';
 
 /**
- * Web Page bridge connector: fetches a web page server-side and returns its
- * extracted content over MCP / REST. Lets tools that can only consume a URL
- * (e.g. the Salesforce web crawler) reach a page through a stable mcpify URL.
+ * Web Page bridge connector: fetches one or more web pages server-side and
+ * returns their extracted content over MCP / REST. Lets tools that can only
+ * consume a URL (e.g. the Salesforce web crawler) reach pages through a stable
+ * mcpify URL — including a single get_all_pages endpoint that returns every
+ * configured page at once.
  *
  * Purely additive — dispatched by connector_type === 'web' in the runtime,
  * alongside the existing HTTP / database / knowledge executors.
@@ -14,31 +16,45 @@ export interface WebResult {
 	isError: boolean;
 }
 
-// Default upstream fetch timeout for a page.
+// Default upstream fetch timeout per page.
 const FETCH_TIMEOUT_MS = 20_000;
-// Cap on how much text we return so responses stay reasonable.
+// Cap on how much text we return per page so responses stay reasonable.
 const MAX_TEXT = 100_000;
+// Safety cap on how many pages get_all_pages will fetch in one call.
+const MAX_PAGES = 25;
 // A browser-like UA so pages behind basic bot filters still respond.
 const BROWSER_UA =
 	'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
+const FORMAT_PROP = {
+	type: 'string',
+	enum: ['json', 'text', 'markdown', 'html'],
+	description: 'Response format: json (default), text, markdown, or raw html.',
+};
+
 export const WEB_TOOLS: GeneratedTool[] = [
+	{
+		name: 'get_all_pages',
+		description:
+			'Fetch every page configured on this connection and return their extracted content (title, description, text, links) as one array. One call returns all pages.',
+		input_schema: {
+			type: 'object',
+			properties: { format: FORMAT_PROP },
+		},
+		http_method: 'GET',
+		path_template: '/',
+		param_map: [],
+	},
 	{
 		name: 'get_page',
 		description:
-			'Fetch a web page and return its extracted content — title, meta description, cleaned text, and links. Defaults to the connection’s configured page; pass a url to fetch a different one.',
+			'Fetch a single page and return its extracted content. Defaults to the first configured page; pass index to pick another configured page, or url to fetch an arbitrary one.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				url: {
-					type: 'string',
-					description: 'The page URL to fetch. Defaults to the connection’s configured page.',
-				},
-				format: {
-					type: 'string',
-					enum: ['json', 'text', 'markdown', 'html'],
-					description: 'Response format: json (default), text, markdown, or raw html.',
-				},
+				url: { type: 'string', description: 'An explicit page URL to fetch (overrides index).' },
+				index: { type: 'integer', description: 'Zero-based index into the configured pages (default 0).' },
+				format: FORMAT_PROP,
 			},
 		},
 		http_method: 'GET',
@@ -78,6 +94,13 @@ export function isSafeHttpUrl(raw: string): { ok: boolean; reason?: string } {
 	return { ok: true };
 }
 
+/** The list of pages configured on a web connection (falls back to base_url). */
+export function connectionPages(connection: any): string[] {
+	const pages = (connection?.config || {}).pages;
+	if (Array.isArray(pages) && pages.length) return pages.map((p: any) => String(p)).filter(Boolean);
+	return connection?.base_url ? [String(connection.base_url)] : [];
+}
+
 const decodeEntities = (s: string): string =>
 	s
 		.replace(/&nbsp;/g, ' ')
@@ -115,8 +138,7 @@ export function extractPage(html: string, pageUrl: string): Extracted {
 		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
 		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
 		.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-		.replace(/<!--[\s\S]*?-->/g, ' ')
-		.replace(/<head[\s\S]*?<\/head>/gi, (m) => m); // keep head for title/meta extraction below
+		.replace(/<!--[\s\S]*?-->/g, ' ');
 
 	const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
 	const title = titleMatch ? decodeEntities(titleMatch[1]).replace(/\s+/g, ' ').trim() : '';
@@ -150,9 +172,7 @@ export function extractPage(html: string, pageUrl: string): Extracted {
 	const bodyMatch = stripped.match(/<body[\s\S]*?<\/body>/i);
 	const bodyHtml = bodyMatch ? bodyMatch[0] : stripped;
 	const text = decodeEntities(
-		bodyHtml
-			.replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr)\s*>/gi, '\n')
-			.replace(/<[^>]+>/g, ' ')
+		bodyHtml.replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr)\s*>/gi, '\n').replace(/<[^>]+>/g, ' ')
 	)
 		.replace(/[ \t\f\v]+/g, ' ')
 		.replace(/\n\s*\n\s*\n+/g, '\n\n')
@@ -163,23 +183,76 @@ export function extractPage(html: string, pageUrl: string): Extracted {
 	return { title, description, text, links };
 }
 
-/** Executes the web bridge tool: fetch the page and format the result. */
+interface PageResult {
+	url: string;
+	status: number;
+	contentType: string | null;
+	title: string;
+	description: string;
+	text: string;
+	links: Array<{ href: string; text: string }>;
+	raw?: string;
+	error?: string;
+}
+
+/** Fetch a single page and extract it, never throwing — errors land in `error`. */
+async function fetchAndExtract(url: string, headers: Record<string, string>, wantRaw: boolean): Promise<PageResult> {
+	const safe = isSafeHttpUrl(url);
+	if (!safe.ok) return blankPage(url, `Refused to fetch: ${safe.reason}`);
+
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+	try {
+		const resp = await fetch(url, { headers, redirect: 'follow', signal: controller.signal });
+		const raw = await resp.text();
+		const ex = extractPage(raw, url);
+		return {
+			url,
+			status: resp.status,
+			contentType: resp.headers.get('content-type'),
+			...ex,
+			...(wantRaw ? { raw: raw.slice(0, MAX_TEXT) } : {}),
+			...(resp.ok ? {} : { error: `HTTP ${resp.status}` }),
+		};
+	} catch (err: any) {
+		return blankPage(url, err?.name === 'AbortError' ? 'Timed out' : err?.message || 'Fetch failed');
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+function blankPage(url: string, error: string): PageResult {
+	return { url, status: 0, contentType: null, title: '', description: '', text: '', links: [], error };
+}
+
+function renderPage(p: PageResult, format: string): string {
+	if (format === 'html') return `<!-- ${p.url} (HTTP ${p.status}) -->\n${p.raw || ''}`;
+	if (format === 'text') return p.error ? `[${p.url}] Error: ${p.error}` : p.text;
+	if (format === 'markdown') {
+		if (p.error) return `## ${p.url}\n\n> Error: ${p.error}`;
+		return [
+			p.title ? `# ${p.title}` : `# ${p.url}`,
+			p.description ? `> ${p.description}` : '',
+			p.text,
+			p.links.length ? '## Links\n' + p.links.map((l) => `- [${l.text || l.href}](${l.href})`).join('\n') : '',
+		]
+			.filter(Boolean)
+			.join('\n\n');
+	}
+	return JSON.stringify(p, null, 2); // json
+}
+
+/** Executes a web bridge tool: get_all_pages (every configured page) or get_page (one). */
 export async function executeWebTool(
 	connection: any,
-	_tool: { name: string },
+	tool: { name: string },
 	args: Record<string, any>
 ): Promise<WebResult> {
-	const target = (args?.url && String(args.url).trim()) || connection.base_url;
-	if (!target) return errorResult('No page URL configured or provided.');
+	const format = ['json', 'text', 'markdown', 'html'].includes(String(args?.format)) ? String(args.format) : 'json';
+	const wantRaw = format === 'html';
 
-	const safe = isSafeHttpUrl(target);
-	if (!safe.ok) return errorResult(`Refused to fetch ${target}: ${safe.reason}.`);
-
-	const format = ['json', 'text', 'markdown', 'html'].includes(String(args?.format))
-		? String(args.format)
-		: 'json';
-
-	// Custom headers configured on the connection (e.g. a cookie, auth header).
+	// Custom headers configured on the connection (e.g. a cookie, auth header),
+	// plus browser-like defaults so basic bot filters still respond.
 	const headers: Record<string, string> = {
 		'User-Agent': BROWSER_UA,
 		Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -190,54 +263,36 @@ export async function executeWebTool(
 		for (const [k, v] of Object.entries(staticHeaders)) headers[k] = String(v);
 	}
 
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-	let resp: Response;
-	try {
-		resp = await fetch(target, { headers, redirect: 'follow', signal: controller.signal });
-	} catch (err: any) {
-		clearTimeout(timer);
-		return errorResult(err?.name === 'AbortError' ? `Timed out fetching ${target}.` : err?.message || 'Fetch failed');
-	}
-	clearTimeout(timer);
+	const pages = connectionPages(connection);
 
-	const raw = await resp.text();
+	if (tool.name === 'get_all_pages') {
+		if (!pages.length) return errorResult('No pages configured on this connection.');
+		const targets = pages.slice(0, MAX_PAGES);
+		const results = await Promise.all(targets.map((p) => fetchAndExtract(p, headers, wantRaw)));
+		const truncated = pages.length > MAX_PAGES;
 
-	if (format === 'html') {
-		return {
-			content: [{ type: 'text', text: `HTTP ${resp.status} ${target}\n\n${raw.slice(0, MAX_TEXT)}` }],
-			isError: !resp.ok,
-		};
-	}
-
-	const ex = extractPage(raw, target);
-
-	if (format === 'text') {
-		return { content: [{ type: 'text', text: ex.text }], isError: !resp.ok };
-	}
-	if (format === 'markdown') {
-		const md = [
-			ex.title ? `# ${ex.title}` : '',
-			ex.description ? `> ${ex.description}` : '',
-			ex.text,
-			ex.links.length ? '\n## Links\n' + ex.links.map((l) => `- [${l.text || l.href}](${l.href})`).join('\n') : '',
-		]
-			.filter(Boolean)
-			.join('\n\n');
-		return { content: [{ type: 'text', text: md }], isError: !resp.ok };
+		let text: string;
+		if (format === 'json') {
+			text = JSON.stringify({ count: results.length, truncated, pages: results }, null, 2);
+		} else {
+			const sep = format === 'markdown' ? '\n\n---\n\n' : '\n\n========================================\n\n';
+			text = results.map((r) => renderPage(r, format)).join(sep);
+			if (truncated) text += `\n\n[Only the first ${MAX_PAGES} of ${pages.length} pages were fetched.]`;
+		}
+		return { content: [{ type: 'text', text }], isError: results.every((r) => !!r.error) };
 	}
 
-	// json (default)
-	const payload = {
-		url: target,
-		status: resp.status,
-		contentType: resp.headers.get('content-type') || null,
-		title: ex.title,
-		description: ex.description,
-		text: ex.text,
-		links: ex.links,
-	};
-	return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }], isError: !resp.ok };
+	// get_page — an explicit url, or the page at `index` (default 0).
+	let target = args?.url && String(args.url).trim();
+	if (!target) {
+		const idx = Number.isInteger(args?.index) ? Number(args.index) : 0;
+		target = pages[idx] || pages[0];
+	}
+	if (!target) return errorResult('No page URL configured or provided.');
+
+	const result = await fetchAndExtract(target, headers, wantRaw);
+	if (result.error && result.status === 0) return errorResult(`Failed to fetch ${target}: ${result.error}.`);
+	return { content: [{ type: 'text', text: renderPage(result, format) }], isError: !!result.error };
 }
 
 function errorResult(message: string): WebResult {

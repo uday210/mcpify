@@ -118,8 +118,15 @@ export async function buildConnectionInsert(
 		baseUrl = 'kb://local';
 		tools = KB_TOOLS;
 	} else if (connectorType === 'web') {
-		if (!baseUrl) throw new Error('Provide the web page URL to bridge.');
-		if (!/^https?:\/\//i.test(baseUrl)) throw new Error('Web page URL must start with http:// or https://');
+		// One or more pages: body.pages (array) or a single body.baseUrl.
+		const listed = Array.isArray(body.pages) ? body.pages.map((p: any) => String(p).trim()).filter(Boolean) : [];
+		const pages = listed.length ? listed : baseUrl ? [baseUrl.trim()] : [];
+		if (!pages.length) throw new Error('Add at least one web page URL.');
+		for (const u of pages) {
+			if (!/^https?:\/\//i.test(u)) throw new Error(`Web page URL must start with http:// or https://: ${u}`);
+		}
+		baseUrl = pages[0];
+		config.pages = pages;
 		tools = WEB_TOOLS;
 	} else {
 		throw new Error(`Unknown connector type: ${connectorType}`);
