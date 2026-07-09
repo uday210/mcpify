@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { executeTool } from '@/lib/proxy';
 import { executeDbTool } from '@/lib/connectors/database';
+import { executeWebTool } from '@/lib/connectors/web';
 import { executeKbTool } from '@/lib/connectors/kb';
 import { redactObject, redactText } from '@/lib/mcp/redact';
 import { buildStepArgs, type CompositeCtx } from '@/lib/mcp/composite';
@@ -407,7 +408,10 @@ export async function handleRpc(
 					response = rpcError(id, INVALID_PARAMS, `No connection for resource: ${toolName}`);
 					break;
 				}
-				const result = await executeTool(connection, tool, {});
+				const result =
+					connection.connector_type === 'web'
+						? await executeWebTool(connection, tool, {})
+						: await executeTool(connection, tool, {});
 				statusCode = result.isError ? 502 : 200;
 				const text = result.content?.map((c: any) => c.text).join('\n') || '';
 				respText = text.slice(0, 8000) || null;
@@ -505,7 +509,9 @@ export async function handleRpc(
 							? await executeDbTool(connection, tool, args)
 							: connection.connector_type === 'knowledge'
 								? await executeKbTool(connection, tool, args, createAdminClient())
-								: await executeTool(connection, tool, args);
+								: connection.connector_type === 'web'
+									? await executeWebTool(connection, tool, args)
+									: await executeTool(connection, tool, args);
 				}
 				statusCode = result.isError ? 502 : 200;
 				respText = result.content?.map((c: any) => c.text).join('\n').slice(0, 8000) || null;
