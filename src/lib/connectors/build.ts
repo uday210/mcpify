@@ -3,6 +3,7 @@ import { getCatalogConnector } from '@/lib/connectors/catalog';
 import { parseSpecString, GeneratedTool } from '@/lib/connectors/openapi-to-mcp';
 import { DATABASE_TOOLS } from '@/lib/connectors/database';
 import { KB_TOOLS } from '@/lib/connectors/kb';
+import { WEB_TOOLS } from '@/lib/connectors/web';
 
 export interface BuildResult {
 	insert: Record<string, any>;
@@ -116,6 +117,10 @@ export async function buildConnectionInsert(
 	} else if (connectorType === 'knowledge') {
 		baseUrl = 'kb://local';
 		tools = KB_TOOLS;
+	} else if (connectorType === 'web') {
+		if (!baseUrl) throw new Error('Provide the web page URL to bridge.');
+		if (!/^https?:\/\//i.test(baseUrl)) throw new Error('Web page URL must start with http:// or https://');
+		tools = WEB_TOOLS;
 	} else {
 		throw new Error(`Unknown connector type: ${connectorType}`);
 	}

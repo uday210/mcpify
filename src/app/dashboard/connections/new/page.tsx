@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle, Database, BookOpen } from 'lucide-react';
+import { Boxes, FileJson, Wrench, ArrowLeft, Plus, Trash2, Search, ExternalLink, Plug, CheckCircle2, XCircle, Info, RefreshCw, AlertTriangle, Database, BookOpen, Globe } from 'lucide-react';
 import AppIcon from '@/components/AppIcon';
 import { parseCurl } from '@/lib/connectors/curl';
 
-type ConnectorType = 'catalog' | 'openapi' | 'manual' | 'database' | 'knowledge';
+type ConnectorType = 'catalog' | 'openapi' | 'manual' | 'database' | 'knowledge' | 'web';
 type AuthType = 'none' | 'api_key' | 'bearer' | 'basic' | 'custom' | 'oauth' | 'oauth2_cc' | 'oauth2_account' | 'token_path';
 
 interface CatalogApp {
@@ -237,6 +237,10 @@ export default function NewConnectionPage() {
 		if (connectorType === 'database') {
 			body.credentials = { value: dbUrl };
 		}
+		if (connectorType === 'web') {
+			body.baseUrl = baseUrl;
+			if (Object.keys(staticHeaders).length) config.static_headers = staticHeaders;
+		}
 		return body;
 	};
 
@@ -306,6 +310,7 @@ export default function NewConnectionPage() {
 		{ v: 'manual', label: 'Manual', icon: Wrench },
 		{ v: 'database', label: 'Database', icon: Database },
 		{ v: 'knowledge', label: 'Knowledge', icon: BookOpen },
+		{ v: 'web', label: 'Web Page', icon: Globe },
 	];
 
 	return (
@@ -334,7 +339,7 @@ export default function NewConnectionPage() {
 								onClick={() => {
 									setConnectorType(s.v);
 									setAppSlug('');
-									if (s.v === 'database' || s.v === 'knowledge') setAuthType('none');
+									if (s.v === 'database' || s.v === 'knowledge' || s.v === 'web') setAuthType('none');
 									else if (s.v !== 'catalog') setAuthType('api_key');
 								}}
 								className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-lg transition ${
@@ -599,6 +604,30 @@ export default function NewConnectionPage() {
 								</div>
 							)}
 
+							{/* web page bridge */}
+							{connectorType === 'web' && (
+								<div className="space-y-3">
+									<div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600">
+										Bridge a web page: mcpify fetches it server-side and exposes its content at a stable URL you can
+										hand to tools that only take a URL (e.g. the Salesforce web crawler). You get a{' '}
+										<span className="font-mono text-xs">get_page</span> tool returning the title, text and links.
+									</div>
+									<div>
+										<label className={labelCls}>Web page URL</label>
+										<input
+											className={input}
+											value={baseUrl}
+											onChange={(e) => setBaseUrl(e.target.value)}
+											placeholder="https://example.com/the-page-you-want"
+										/>
+										<p className="text-xs text-slate-400 mt-1">
+											The default page this connection serves. Callers can override it per request with a{' '}
+											<span className="font-mono">url</span> argument.
+										</p>
+									</div>
+								</div>
+							)}
+
 							{/* per-account base URL (Shopify store, Jira/Zendesk site…) */}
 							{connectorType === 'catalog' && selectedApp?.needs_base_url && (
 								<div>
@@ -619,8 +648,8 @@ export default function NewConnectionPage() {
 								<input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="My connection" />
 							</div>
 
-							{/* auth selector (non-catalog, non-database, non-knowledge) */}
-							{connectorType !== 'catalog' && connectorType !== 'database' && connectorType !== 'knowledge' && (
+							{/* auth selector (non-catalog, non-database, non-knowledge, non-web) */}
+							{connectorType !== 'catalog' && connectorType !== 'database' && connectorType !== 'knowledge' && connectorType !== 'web' && (
 								<div>
 									<label className={labelCls}>Authentication</label>
 									<select className={input} value={authType} onChange={(e) => setAuthType(e.target.value as AuthType)}>
