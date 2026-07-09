@@ -18,9 +18,14 @@ export default function ServerRest({ url, authMode, apiKey, tools = [] }: Props)
 	const restBase = url.replace('/api/mcp/', '/api/rest/');
 	const openapiUrl = `${restBase}/openapi.json`;
 	const bearer = authMode === 'api_key' ? apiKey : authMode === 'oauth' ? '<ACCESS_TOKEN>' : null;
-	const sampleTool = tools[0]?.name || '<tool_name>';
+	const sample = tools[0];
+	const sampleTool = sample?.name || '<tool_name>';
+	const sampleMethod = (sample?.http_method || 'POST').toUpperCase();
 
-	const curl = `curl -X POST "${restBase}/${sampleTool}" \\
+	const curl =
+		sampleMethod === 'GET'
+			? `curl "${restBase}/${sampleTool}?arg=value"${bearer ? ` \\\n  -H "Authorization: Bearer ${bearer}"` : ''}`
+			: `curl -X ${sampleMethod} "${restBase}/${sampleTool}" \\
 ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type: application/json" \\
   -d '{ "arg": "value" }'`;
 
@@ -41,7 +46,8 @@ ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type
 			</div>
 			<p className="text-sm text-slate-500 mb-4">
 				Call this connection&apos;s tools over plain HTTP — no MCP client needed. Works with ChatGPT Custom GPT
-				Actions, Zapier, n8n, or any HTTP client. Each tool is <code className="text-xs">POST /&lt;tool&gt;</code>.
+				Actions, Zapier, n8n, or any HTTP client. Each tool is exposed under its configured HTTP method (set it
+				on the Tools tab).
 			</p>
 
 			<div className="space-y-4">
@@ -70,7 +76,9 @@ ${bearer ? `  -H "Authorization: Bearer ${bearer}" \\\n` : ''}  -H "Content-Type
 						<div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg divide-y">
 							{tools.map((t) => (
 								<div key={t.name} className="flex items-center gap-2 px-3 py-2 text-xs">
-									<span className="font-mono px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded">POST</span>
+									<span className="font-mono px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded w-14 text-center">
+										{(t.http_method || 'POST').toUpperCase()}
+									</span>
 									<span className="font-mono text-slate-600 truncate">/api/rest/…/{t.name}</span>
 								</div>
 							))}

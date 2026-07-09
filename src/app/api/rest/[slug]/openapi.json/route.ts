@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 	const { data: tools } = await admin
 		.from('mcp_tools')
-		.select('name, description, input_schema')
+		.select('name, description, input_schema, http_method')
 		.eq('mcp_server_id', server.id)
 		.eq('enabled', true)
 		.order('name');
@@ -36,20 +36,33 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 	const base = `${appBaseUrl(request.url)}/api/rest/${slug}`;
 	const paths: Record<string, any> = {};
 	for (const t of tools || []) {
-		paths[`/${t.name}`] = {
-			post: {
-				operationId: t.name,
-				summary: (t.description || t.name).slice(0, 300),
-				requestBody: {
-					required: true,
-					content: { 'application/json': { schema: t.input_schema || { type: 'object', properties: {} } } },
-				},
-				responses: {
-					'200': { description: 'Tool result', content: { 'application/json': { schema: { type: 'object' } } } },
-				},
-				security: [{ bearerAuth: [] }],
+		// Advertise each tool under its configured HTTP method. GET takes its
+		// arguments as query parameters (a request body on GET is discouraged);
+		// every other method takes them as a JSON body.
+		const method = (t.http_method || 'POST').toLowerCase();
+		const schema = t.input_schema || { type: 'object', properties: {} };
+		const op: Record<string, any> = {
+			operationId: t.name,
+			summary: (t.description || t.name).slice(0, 300),
+			responses: {
+				'200': { description: 'Tool result', content: { 'application/json': { schema: { type: 'object' } } } },
 			},
+			security: [{ bearerAuth: [] }],
 		};
+		if (method === 'get') {
+			const props = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+			const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+			op.parameters = Object.entries(props).map(([name, s]: [string, any]) => ({
+				name,
+				in: 'query',
+				required: required.has(name),
+				schema: s && typeof s === 'object' ? s : { type: 'string' },
+				...(s && typeof s === 'object' && s.description ? { description: s.description } : {}),
+			}));
+		} else {
+			op.requestBody = { required: true, content: { 'application/json': { schema } } };
+		}
+		paths[`/${t.name}`] = { [method]: op };
 	}
 
 	return NextResponse.json({

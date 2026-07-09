@@ -6,6 +6,8 @@ import { serverHasInterface } from '@/lib/mcp/interfaces';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 function bearer(req: NextRequest): string | null {
 	const h = req.headers.get('authorization') || '';
 	if (/^bearer\s+/i.test(h)) return h.replace(/^bearer\s+/i, '').trim();
@@ -13,11 +15,14 @@ function bearer(req: NextRequest): string | null {
 }
 
 /**
- * POST /api/rest/:slug/:tool — call a tool over plain REST (for ChatGPT Actions,
- * Zapier, raw HTTP). Body is the tool arguments. Delegates to the MCP runtime so
- * rate limits, approvals, composite tools and logging all apply.
+ * /api/rest/:slug/:tool — call a tool over plain REST (ChatGPT Actions, Zapier,
+ * raw HTTP). Any HTTP method is accepted so a tool can be exposed under its
+ * configured method (GET/POST/PUT/PATCH/DELETE); the OpenAPI schema advertises
+ * that method. Arguments are read from the query string and, for methods that
+ * carry a body, merged with the JSON body (body wins). Delegates to the MCP
+ * runtime so rate limits, approvals, composite tools and logging all apply.
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string; tool: string }> }) {
+async function handle(request: NextRequest, { params }: { params: Promise<{ slug: string; tool: string }> }) {
 	const { slug, tool } = await params;
 
 	const authed = await authenticateServer(slug, bearer(request));
@@ -26,12 +31,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 		return NextResponse.json({ error: 'REST interface disabled for this server' }, { status: 404 });
 	}
 
-	let args: any = {};
-	try {
-		const text = await request.text();
-		args = text ? JSON.parse(text) : {};
-	} catch {
-		return NextResponse.json({ error: 'Body must be JSON' }, { status: 400 });
+	// Query params first, then merge any JSON body over them.
+	const args: Record<string, any> = {};
+	for (const [k, v] of new URL(request.url).searchParams) args[k] = v;
+
+	if (METHODS_WITH_BODY.has(request.method)) {
+		try {
+			const text = await request.text();
+			if (text) {
+				const parsed = JSON.parse(text);
+				if (parsed && typeof parsed === 'object') Object.assign(args, parsed);
+			}
+		} catch {
+			return NextResponse.json({ error: 'Body must be JSON' }, { status: 400 });
+		}
 	}
 
 	const meta = {
@@ -61,3 +74,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 	}
 	return NextResponse.json({ isError: !!result.isError, data }, { status: result.isError ? 502 : 200 });
 }
+
+export const GET = handle;
+export const POST = handle;
+export const PUT = handle;
+export const PATCH = handle;
+export const DELETE = handle;
